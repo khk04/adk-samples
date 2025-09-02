@@ -41,6 +41,36 @@ services:
       - "com.docker.compose.service=doc-question-report-agent"
       - "com.docker.compose.project=adk-samples"
 
+  doc-agent-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    image: doc-agent-frontend:latest
+    container_name: doc-agent-frontend-container
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    networks:
+      - doc-question-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - doc-question-report-agent
+    labels:
+      - "com.docker.compose.service=doc-agent-frontend"
+      - "com.docker.compose.project=adk-samples"
+
   redis:
     image: redis:7-alpine
     container_name: doc-question-report-agent-redis
@@ -88,7 +118,7 @@ services:
     container_name: doc-question-report-agent-grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
