@@ -10,7 +10,7 @@ __email__ = "your.email@example.com"
 
 from .main import DocQuestionReportSystem
 from .agents import DocumentQuestionAgent, ReportAgent
-from .models import DocumentAnalysis, QuestionAnswer, ReportRequest, ReportResponse
+from .models import DocumentAnalysis, QuestionCandidate, ReportRequest, ReportDraft, FinalReport
 from .utils import DocumentProcessor, ReportGenerator
 
 __all__ = [
@@ -18,9 +18,10 @@ __all__ = [
     "DocumentQuestionAgent", 
     "ReportAgent",
     "DocumentAnalysis",
-    "QuestionAnswer",
+    "QuestionCandidate",
     "ReportRequest",
-    "ReportResponse",
+    "ReportDraft",
+    "FinalReport",
     "DocumentProcessor",
     "ReportGenerator",
 ]
