@@ -7,6 +7,9 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from loguru import logger
+import uvicorn
+from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.responses import JSONResponse
 
 from .agents import DocumentQuestionAgent, ReportAgent
 from .models import (
@@ -25,240 +28,220 @@ class DocQuestionReportSystem:
         self.report_agent = ReportAgent(openai_client)
         self.active_tasks: Dict[str, ProcessingTask] = {}
         self.document_cache: Dict[str, DocumentAnalysis] = {}
-        self.question_set_cache: Dict[str, QuestionSet] = {}
         
-        logger.info(f"DocQuestionReportSystem 초기화: {self.system_id}")
+        logger.info(f"DocQuestionReportSystem 초기화 완료: {self.system_id}")
     
-    async def process_document_upload(self, file_path: str, filename: str) -> Tuple[DocumentAnalysis, QuestionSet]:
-        """문서 업로드 및 처리의 전체 워크플로우를 실행합니다."""
+    async def process_document(self, document_path: str) -> DocumentAnalysis:
+        """문서를 처리하고 분석 결과를 반환"""
         try:
-            logger.info(f"문서 업로드 처리 시작: {filename}")
+            logger.info(f"문서 처리 시작: {document_path}")
             
-            # 1단계: 문서 분석
-            document_analysis = await self.doc_question_agent.analyze_document(file_path, filename)
+            # DocumentQuestionAgent를 사용하여 문서 분석
+            analysis = await self.doc_question_agent.analyze_document(document_path)
             
             # 캐시에 저장
-            self.document_cache[document_analysis.document_id] = document_analysis
+            self.document_cache[analysis.document_id] = analysis
             
-            # 2단계: 질문 후보 생성
-            question_set = await self.doc_question_agent.generate_question_candidates(document_analysis)
-            
-            # 캐시에 저장
-            self.question_set_cache[question_set.question_set_id] = question_set
-            
-            logger.info(f"문서 업로드 처리 완료: {filename}")
-            return document_analysis, question_set
+            logger.info(f"문서 처리 완료: {analysis.document_id}")
+            return analysis
             
         except Exception as e:
-            logger.error(f"문서 업로드 처리 실패: {filename}, 오류: {str(e)}")
+            logger.error(f"문서 처리 실패: {str(e)}")
             raise
     
-    async def select_questions_and_context(self, question_set_id: str, 
-                                         selected_question_ids: List[str],
-                                         report_type: str,
-                                         scope: str,
-                                         criteria: List[str],
-                                         custom_requirements: Optional[str] = None) -> SelectedContext:
-        """사용자가 질문을 선택하고 컨텍스트를 설정합니다."""
+    async def generate_questions(self, document_id: str) -> QuestionSet:
+        """문서에 대한 질문 세트를 생성"""
         try:
-            logger.info(f"질문 선택 및 컨텍스트 설정: 질문 세트 ID {question_set_id}")
+            logger.info(f"질문 생성 시작: {document_id}")
             
-            # 질문 세트 검증
-            if question_set_id not in self.question_set_cache:
-                raise ValueError(f"질문 세트를 찾을 수 없습니다: {question_set_id}")
+            if document_id not in self.document_cache:
+                raise ValueError(f"문서 ID {document_id}를 찾을 수 없습니다")
             
-            question_set = self.question_set_cache[question_set_id]
+            document = self.document_cache[document_id]
+            questions = await self.doc_question_agent.generate_questions(document)
             
-            # 선택된 질문 ID 검증
-            available_question_ids = [q.question_id for q in question_set.questions]
-            for q_id in selected_question_ids:
-                if q_id not in available_question_ids:
-                    raise ValueError(f"유효하지 않은 질문 ID: {q_id}")
-            
-            # 컨텍스트 생성
-            context = SelectedContext(
-                context_id=str(uuid.uuid4()),
-                question_set_id=question_set_id,
-                selected_questions=selected_question_ids,
-                report_type=report_type,
-                custom_requirements=custom_requirements,
-                scope=scope,
-                criteria=criteria
-            )
-            
-            logger.info(f"컨텍스트 설정 완료: {context.context_id}")
-            return context
+            logger.info(f"질문 생성 완료: {len(questions.questions)}개")
+            return questions
             
         except Exception as e:
-            logger.error(f"컨텍스트 설정 실패: {str(e)}")
+            logger.error(f"질문 생성 실패: {str(e)}")
             raise
     
-    async def generate_report_draft(self, context: SelectedContext) -> ReportDraft:
-        """선택된 컨텍스트를 바탕으로 리포트 초안을 생성합니다."""
+    async def generate_report(self, request: ReportRequest) -> ReportDraft:
+        """선택된 질문을 기반으로 리포트 초안 생성"""
         try:
-            logger.info(f"리포트 초안 생성 시작: 컨텍스트 ID {context.context_id}")
+            logger.info(f"리포트 생성 시작: {request.request_id}")
             
-            # 문서 분석 결과 가져오기
-            question_set = self.question_set_cache[context.question_set_id]
-            document_id = question_set.document_id
-            document_analysis = self.document_cache[document_id]
-            
-            # 리포트 초안 생성
-            draft = await self.report_agent.create_report_draft(context, document_analysis)
+            # ReportAgent를 사용하여 리포트 생성
+            draft = await self.report_agent.generate_draft(request)
             
             logger.info(f"리포트 초안 생성 완료: {draft.draft_id}")
             return draft
             
         except Exception as e:
-            logger.error(f"리포트 초안 생성 실패: {str(e)}")
+            logger.error(f"리포트 생성 실패: {str(e)}")
             raise
     
-    async def generate_final_report(self, draft: ReportDraft, 
-                                  context: SelectedContext) -> FinalReport:
-        """초안을 바탕으로 최종 리포트를 생성합니다."""
+    async def finalize_report(self, draft_id: str, feedback: str = "") -> FinalReport:
+        """리포트 초안을 최종본으로 완성"""
         try:
-            logger.info(f"최종 리포트 생성 시작: 초안 ID {draft.draft_id}")
+            logger.info(f"리포트 최종화 시작: {draft_id}")
             
-            # 문서 분석 결과 가져오기
-            question_set = self.question_set_cache[context.question_set_id]
-            document_id = question_set.document_id
-            document_analysis = self.document_cache[document_id]
+            # ReportAgent를 사용하여 최종 리포트 생성
+            final_report = await self.report_agent.finalize_report(draft_id, feedback)
             
-            # 최종 리포트 생성
-            final_report = await self.report_agent.generate_final_report(
-                draft, context, document_analysis
-            )
-            
-            logger.info(f"최종 리포트 생성 완료: {final_report.report_id}")
+            logger.info(f"리포트 최종화 완료: {final_report.report_id}")
             return final_report
             
         except Exception as e:
-            logger.error(f"최종 리포트 생성 실패: {str(e)}")
+            logger.error(f"리포트 최종화 실패: {str(e)}")
             raise
     
-    async def process_feedback_and_regenerate(self, feedback: FeedbackRequest) -> QuestionSet:
-        """사용자 피드백을 처리하고 새로운 질문 세트를 생성합니다."""
+    async def regenerate_questions(self, document_id: str, feedback: str) -> QuestionSet:
+        """피드백을 기반으로 새로운 질문 세트 생성"""
         try:
-            logger.info(f"피드백 처리 및 질문 재생성 시작: 리포트 ID {feedback.report_id}")
+            logger.info(f"질문 재생성 시작: {document_id}")
             
-            # 리포트 ID로 관련 정보 찾기
-            # 실제 구현에서는 데이터베이스에서 관련 정보 조회
-            document_analysis = await self._get_document_analysis_from_feedback(feedback)
-            current_question_set = await self._get_question_set_from_feedback(feedback)
+            if document_id not in self.document_cache:
+                raise ValueError(f"문서 ID {document_id}를 찾을 수 없습니다")
             
-            # 새로운 질문 세트 생성
-            new_question_set = await self.doc_question_agent.regenerate_questions(
-                document_analysis, feedback, current_question_set
+            document = self.document_cache[document_id]
+            new_questions = await self.doc_question_agent.regenerate_questions(
+                document, feedback
             )
             
-            # 캐시 업데이트
-            self.question_set_cache[new_question_set.question_set_id] = new_question_set
-            
-            logger.info(f"질문 재생성 완료: 새로운 질문 세트 ID {new_question_set.question_set_id}")
-            return new_question_set
+            logger.info(f"질문 재생성 완료: {len(new_questions.questions)}개")
+            return new_questions
             
         except Exception as e:
-            logger.error(f"피드백 처리 및 질문 재생성 실패: {str(e)}")
+            logger.error(f"질문 재생성 실패: {str(e)}")
             raise
     
-    async def get_system_status(self) -> Dict[str, any]:
-        """시스템 상태를 반환합니다."""
+    def get_system_status(self) -> Dict:
+        """시스템 상태 정보 반환"""
         return {
             "system_id": self.system_id,
             "status": "running",
             "active_tasks": len(self.active_tasks),
             "cached_documents": len(self.document_cache),
-            "cached_question_sets": len(self.question_set_cache),
-            "uptime": datetime.now().isoformat(),
-            "agents": {
-                "doc_question_agent": self.doc_question_agent.agent_id,
-                "report_agent": self.report_agent.agent_id
-            }
+            "timestamp": datetime.now().isoformat()
         }
-    
-    async def cleanup_resources(self):
-        """시스템 리소스를 정리합니다."""
-        try:
-            logger.info("시스템 리소스 정리 시작")
-            
-            # 활성 작업 정리
-            for task_id, task in self.active_tasks.items():
-                if task.status == ProcessingStatus.COMPLETED:
-                    del self.active_tasks[task_id]
-            
-            # 캐시 정리 (오래된 항목 제거)
-            current_time = datetime.now()
-            max_age_hours = 24
-            
-            # 문서 캐시 정리
-            expired_docs = []
-            for doc_id, doc in self.document_cache.items():
-                age = (current_time - doc.analysis_timestamp).total_seconds() / 3600
-                if age > max_age_hours:
-                    expired_docs.append(doc_id)
-            
-            for doc_id in expired_docs:
-                del self.document_cache[doc_id]
-            
-            # 질문 세트 캐시 정리
-            expired_qsets = []
-            for qset_id, qset in self.question_set_cache.items():
-                age = (current_time - qset.generated_at).total_seconds() / 3600
-                if age > max_age_hours:
-                    expired_qsets.append(qset_id)
-            
-            for qset_id in expired_qsets:
-                del self.question_set_cache[qset_id]
-            
-            logger.info(f"리소스 정리 완료: {len(expired_docs)}개 문서, {len(expired_qsets)}개 질문 세트 제거")
-            
-        except Exception as e:
-            logger.error(f"리소스 정리 실패: {str(e)}")
-    
-    async def _get_document_analysis_from_feedback(self, feedback: FeedbackRequest) -> DocumentAnalysis:
-        """피드백에서 문서 분석 결과를 가져옵니다."""
-        # 실제 구현에서는 데이터베이스에서 조회
-        # 임시로 캐시에서 첫 번째 문서 반환
-        if self.document_cache:
-            return list(self.document_cache.values())[0]
-        else:
-            raise ValueError("문서 분석 결과를 찾을 수 없습니다")
-    
-    async def _get_question_set_from_feedback(self, feedback: FeedbackRequest) -> QuestionSet:
-        """피드백에서 질문 세트를 가져옵니다."""
-        # 실제 구현에서는 데이터베이스에서 조회
-        # 임시로 캐시에서 첫 번째 질문 세트 반환
-        if self.question_set_cache:
-            return list(self.question_set_cache.values())[0]
-        else:
-            raise ValueError("질문 세트를 찾을 수 없습니다")
 
 
-# 비동기 실행을 위한 메인 함수
-async def main():
-    """메인 실행 함수"""
+# FastAPI 앱 생성
+app = FastAPI(
+    title="Document Question & Report Agent",
+    description="2-Agent 시스템으로 문서 처리와 질문 응답, 보고서 생성을 수행하는 AI 에이전트",
+    version="0.1.0"
+)
+
+# 시스템 인스턴스 생성
+system = DocQuestionReportSystem()
+
+
+@app.get("/")
+async def root():
+    """루트 엔드포인트"""
+    return {"message": "Document Question & Report Agent API", "status": "running"}
+
+
+@app.get("/health")
+async def health_check():
+    """헬스체크 엔드포인트"""
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+
+@app.get("/status")
+async def get_status():
+    """시스템 상태 조회"""
+    return system.get_system_status()
+
+
+@app.post("/upload")
+async def upload_document(file: UploadFile = File(...)):
+    """문서 업로드 및 분석"""
     try:
-        # 시스템 초기화
-        system = DocQuestionReportSystem()
+        # 임시 파일로 저장
+        import tempfile
+        import os
         
-        # 시스템 상태 확인
-        status = await system.get_system_status()
-        logger.info(f"시스템 상태: {status}")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
         
-        # 예시 사용법
-        logger.info("DocQuestionReportSystem이 성공적으로 초기화되었습니다.")
-        logger.info("사용 가능한 메서드:")
-        logger.info("- process_document_upload(file_path, filename)")
-        logger.info("- select_questions_and_context(...)")
-        logger.info("- generate_report_draft(context)")
-        logger.info("- generate_final_report(draft, context)")
-        logger.info("- process_feedback_and_regenerate(feedback)")
+        # 문서 처리
+        analysis = await system.process_document(tmp_file_path)
+        
+        # 임시 파일 삭제
+        os.unlink(tmp_file_path)
+        
+        return {
+            "message": "문서 업로드 및 분석 완료",
+            "document_id": analysis.document_id,
+            "filename": file.filename
+        }
         
     except Exception as e:
-        logger.error(f"시스템 초기화 실패: {str(e)}")
-        raise
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/questions/{document_id}")
+async def get_questions(document_id: str):
+    """문서에 대한 질문 세트 생성"""
+    try:
+        questions = await system.generate_questions(document_id)
+        return questions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/report")
+async def create_report(request: ReportRequest):
+    """리포트 생성"""
+    try:
+        draft = await system.generate_report(request)
+        return draft
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/report/{draft_id}/finalize")
+async def finalize_report(draft_id: str, feedback: str = ""):
+    """리포트 최종화"""
+    try:
+        final_report = await system.finalize_report(draft_id, feedback)
+        return final_report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/questions/{document_id}/regenerate")
+async def regenerate_questions(document_id: str, feedback: str):
+    """질문 재생성"""
+    try:
+        new_questions = await system.regenerate_questions(document_id, feedback)
+        return new_questions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def main():
+    """메인 함수"""
+    logger.info("DocQuestionReportSystem 시작 중...")
+    
+    # 시스템 초기화
+    logger.info("시스템 초기화 완료")
+    
+    return system
 
 
 if __name__ == "__main__":
-    # 비동기 실행
-    asyncio.run(main())
+    # FastAPI 서버 실행
+    logger.info("FastAPI 서버 시작 중...")
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8000,
+        log_level="info"
+    )
