@@ -2,66 +2,80 @@
 
 Vue.js 3 기반의 프론트엔드 애플리케이션입니다.
 
-## 🚀 기능
+## 🚀 주요 기능
 
-- **문서 업로드**: PDF, DOCX, Excel, CSV 등 다양한 형식 지원
-- **질문 생성**: AI 기반 자동 질문 생성
-- **리포트 생성**: 선택된 질문을 바탕으로 전문 리포트 생성
+- **단계별 워크플로우**: 문서 업로드 → 질문 생성 → 질문 선택 → 리포트 생성 → 다운로드
 - **반응형 디자인**: 모바일과 데스크톱 모두 지원
-- **실시간 상태 확인**: API 서버 상태 모니터링
+- **실시간 진행률**: 각 단계별 진행 상황을 시각적으로 표시
+- **다양한 출력 형식**: PDF, Word, HTML, PowerPoint 지원
 
 ## 🛠️ 기술 스택
 
-- **Vue.js 3**: 최신 Vue.js 프레임워크
+- **Vue.js 3**: Composition API 기반
 - **Element Plus**: UI 컴포넌트 라이브러리
-- **Vue Router**: 클라이언트 사이드 라우팅
+- **Vue Router**: 페이지 라우팅
 - **Axios**: HTTP 클라이언트
-- **SCSS**: CSS 전처리기
-
-## 📦 설치 및 실행
-
-### 1. 의존성 설치
-```bash
-npm install
-```
-
-### 2. 개발 서버 실행
-```bash
-npm run serve
-```
-
-### 3. 프로덕션 빌드
-```bash
-npm run build
-```
-
-## 🌐 접속 방법
-
-- **개발 환경**: http://localhost:3000
-- **백엔드 API**: http://localhost:8000
 
 ## 📁 프로젝트 구조
 
 ```
-frontend/
-├── public/                 # 정적 파일
-├── src/
-│   ├── components/         # 재사용 가능한 컴포넌트
-│   ├── views/             # 페이지 컴포넌트
-│   ├── router/            # 라우팅 설정
-│   ├── App.vue            # 메인 앱 컴포넌트
-│   └── main.js            # 앱 진입점
-├── package.json           # 프로젝트 설정
-└── vue.config.js          # Vue CLI 설정
+src/
+├── views/                    # 페이지 컴포넌트
+│   ├── Home.vue            # 홈 화면
+│   ├── DocumentUpload.vue  # 문서 업로드
+│   ├── QuestionGeneration.vue # 질문 생성 및 선택
+│   └── ReportGeneration.vue   # 리포트 생성 및 다운로드
+├── router/                  # 라우터 설정
+├── App.vue                  # 메인 앱 컴포넌트
+└── main.js                  # 앱 진입점
 ```
 
-## 🔧 환경 설정
+## 🚀 실행 방법
 
-### 백엔드 API 연결
-프론트엔드는 `http://localhost:8000`의 백엔드 API와 통신합니다.
+### 개발 환경
 
-### 프록시 설정
-개발 환경에서는 `/api` 경로를 통해 백엔드로 프록시됩니다.
+```bash
+# 의존성 설치
+npm install
+
+# 개발 서버 실행
+npm run dev
+# 또는
+npm run serve
+```
+
+### 프로덕션 빌드
+
+```bash
+# 프로덕션 빌드
+npm run build:prod
+
+# 빌드 결과 미리보기
+npm run preview
+```
+
+## ⚙️ 환경 설정
+
+### 개발 환경 (.env)
+```
+VUE_APP_API_URL=http://localhost:8000/api
+NODE_ENV=development
+```
+
+### 프로덕션 환경 (.env.production)
+```
+VUE_APP_API_URL=/api
+NODE_ENV=production
+```
+
+## 🔧 API 연동
+
+프론트엔드는 다음 API 엔드포인트와 연동됩니다:
+
+- `POST /api/upload` - 문서 업로드 및 분석
+- `GET /api/questions/{document_id}` - 질문 세트 생성
+- `POST /api/report` - 리포트 생성
+- `POST /api/report/{draft_id}/finalize` - 리포트 최종화
 
 ## 📱 반응형 디자인
 
@@ -71,36 +85,23 @@ frontend/
 
 ## 🎨 UI/UX 특징
 
-- **모던한 디자인**: Element Plus 컴포넌트 활용
-- **직관적인 워크플로우**: 3단계 프로세스 (업로드 → 질문 → 리포트)
-- **실시간 피드백**: 로딩 상태 및 진행률 표시
-- **접근성**: 키보드 네비게이션 및 스크린 리더 지원
+- **단계별 진행 표시**: 사용자가 현재 위치를 명확히 파악
+- **실시간 피드백**: 각 작업의 진행 상황을 시각적으로 표시
+- **직관적인 인터페이스**: 체크박스 기반의 질문 선택
+- **다양한 다운로드 옵션**: 사용자 요구에 맞는 출력 형식 제공
 
-## 🚀 배포
+## 🐛 문제 해결
 
-### Docker 배포
-```bash
-# 이미지 빌드
-docker build -t doc-agent-frontend .
+### API 연결 오류
+1. 백엔드 서버가 실행 중인지 확인
+2. `.env` 파일의 `VUE_APP_API_URL` 설정 확인
+3. CORS 설정 확인
 
-# 컨테이너 실행
-docker run -p 80:80 doc-agent-frontend
-```
-
-### 정적 호스팅
-```bash
-npm run build
-# dist/ 폴더를 웹 서버에 업로드
-```
-
-## 🤝 기여하기
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### 빌드 오류
+1. Node.js 버전 확인 (16.x 이상 권장)
+2. `npm install` 재실행
+3. `node_modules` 삭제 후 재설치
 
 ## 📄 라이선스
 
-이 프로젝트는 MIT 라이선스 하에 배포됩니다.
+MIT License
