@@ -256,7 +256,8 @@ export default {
           }
         }, 500)
 
-        const response = await axios.post('http://localhost:8000/report', requestData)
+        const apiUrl = process.env.VUE_APP_API_URL ? `${process.env.VUE_APP_API_URL}/report` : '/api/report'
+        const response = await axios.post(apiUrl, requestData)
 
         clearInterval(progressInterval)
         this.generationProgress = 100
@@ -284,7 +285,8 @@ export default {
 
       try {
         // 피드백 제출 API 호출
-        await axios.post(`http://localhost:8000/report/${this.generatedReport.report_id}/feedback`, {
+        const feedbackUrl = process.env.VUE_APP_API_URL ? `${process.env.VUE_APP_API_URL}/report/${this.generatedReport.report_id}/feedback` : `/api/report/${this.generatedReport.report_id}/feedback`
+        await axios.post(feedbackUrl, {
           feedback: this.feedbackText
         })
 
@@ -304,7 +306,8 @@ export default {
 
       try {
         // 리포트 재생성 API 호출
-        const response = await axios.post(`http://localhost:8000/report/${this.generatedReport.report_id}/regenerate`, {
+        const regenerateUrl = process.env.VUE_APP_API_URL ? `${process.env.VUE_APP_API_URL}/report/${this.generatedReport.report_id}/regenerate` : `/api/report/${this.generatedReport.report_id}/regenerate`
+        const response = await axios.post(regenerateUrl, {
           feedback: this.feedbackText
         })
 
