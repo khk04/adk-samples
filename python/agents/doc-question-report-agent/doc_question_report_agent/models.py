@@ -76,6 +76,7 @@ class QuestionSet(BaseModel):
     questions: List[QuestionCandidate] = Field(..., description="질문 후보 리스트")
     generated_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
     version: int = Field(default=1, description="질문 세트 버전")
+    step: int = Field(default=1, description="질문 생성 단계 (Step)")
 
 
 class SelectedContext(BaseModel):
