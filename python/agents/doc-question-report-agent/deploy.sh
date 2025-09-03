@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Document Question & Report Agent 통합 배시 스크립트
-# 백엔드와 프론트엔드를 함께 실행합니다.
+# 백엔드 API, 프론트엔드, Redis를 함께 실행합니다.
 
 set -e
 
@@ -64,6 +64,11 @@ ${CYAN}Document Question & Report Agent 통합 배시 스크립트${NC}
     $0 --run            # 기존 이미지로 서비스 실행
     $0 --stop           # 서비스 중지
     $0 --logs           # 로그 확인
+
+${YELLOW}📋 서비스 구성:${NC}
+• 백엔드 API (포트 8000)
+• 프론트엔드 (포트 8080)
+• Redis (포트 6379)
 
 EOF
 }
@@ -171,7 +176,7 @@ test_services() {
     
     # 프론트엔드 테스트
     log_info "프론트엔드 테스트..."
-    if curl -s http://localhost:8080/health > /dev/null; then
+    if curl -s http://localhost:8080 > /dev/null; then
         log_success "프론트엔드 정상 동작"
     else
         log_error "프론트엔드 연결 실패"
@@ -199,8 +204,6 @@ ${CYAN}🎉 Document Question & Report Agent 배포 완료!${NC}
 ${GREEN}📱 프론트엔드:${NC} http://localhost:8080
 ${GREEN}🔧 백엔드 API:${NC} http://localhost:8000
 ${GREEN}📚 API 문서:${NC} http://localhost:8000/docs
-${GREEN}📊 Grafana:${NC} http://localhost:3001 (admin/admin)
-${GREEN}📈 Prometheus:${NC} http://localhost:9090
 ${GREEN}🗄️  Redis:${NC} localhost:6379
 
 ${YELLOW}💡 사용법:${NC}
