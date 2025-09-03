@@ -31,7 +31,7 @@
 </template>
 
 <script>
-import { Document, Connection } from '@element-plus/icons-vue'
+import { Document, Connection, Upload, ChatDotRound, DataAnalysis } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 
@@ -39,7 +39,10 @@ export default {
   name: 'App',
   components: {
     Document,
-    Connection
+    Connection,
+    Upload,
+    ChatDotRound,
+    DataAnalysis
   },
   methods: {
     async checkHealth() {
