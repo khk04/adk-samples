@@ -1,12 +1,11 @@
 version: '3.8'
 
 services:
+  # 백엔드: Document Question & Report Agent
   doc-question-report-agent:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        BUILDKIT_INLINE_CACHE: 1
     image: doc-question-report-agent:latest
     container_name: doc-question-report-agent-container
     restart: unless-stopped
@@ -29,24 +28,14 @@ services:
       - DEBUG=${DEBUG:-false}
     networks:
       - doc-question-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     depends_on:
       - redis
-    labels:
-      - "com.docker.compose.service=doc-question-report-agent"
-      - "com.docker.compose.project=adk-samples"
 
+  # 프론트엔드: Vue.js 웹 애플리케이션
   doc-agent-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        BUILDKIT_INLINE_CACHE: 1
     image: doc-agent-frontend:latest
     container_name: doc-agent-frontend-container
     restart: unless-stopped
@@ -59,18 +48,11 @@ services:
       - NGINX_PORT=80
     networks:
       - doc-question-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     depends_on:
       - doc-question-report-agent
-    labels:
-      - "com.docker.compose.service=doc-agent-frontend"
-      - "com.docker.compose.project=adk-samples"
+      - redis
 
+  # Redis: 세션 및 캐시 관리
   redis:
     image: redis:7-alpine
     container_name: doc-question-report-agent-redis
@@ -81,64 +63,9 @@ services:
       - redis_data:/data
     networks:
       - doc-question-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    labels:
-      - "com.docker.compose.service=redis"
-      - "com.docker.compose.project=adk-samples"
-
-  # 선택적: 모니터링 서비스
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: doc-question-report-agent-prometheus
-    restart: unless-stopped
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-    networks:
-      - doc-question-network
-    labels:
-      - "com.docker.compose.service=prometheus"
-      - "com.docker.compose.project=adk-samples"
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: doc-question-report-agent-grafana
-    restart: unless-stopped
-    ports:
-      - "3001:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
-    networks:
-      - doc-question-network
-    depends_on:
-      - prometheus
-    labels:
-      - "com.docker.compose.service=grafana"
-      - "com.docker.compose.project=adk-samples"
 
 volumes:
   redis_data:
-    driver: local
-  prometheus_data:
-    driver: local
-  grafana_data:
     driver: local
 
 networks:
