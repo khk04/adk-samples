@@ -211,7 +211,8 @@ export default {
 
       this.generating = true
       try {
-        const response = await axios.get(`http://localhost:8000/questions/${this.selectedDocumentId}`)
+        const apiUrl = process.env.VUE_APP_API_URL ? `${process.env.VUE_APP_API_URL}/questions/${this.selectedDocumentId}` : `/api/questions/${this.selectedDocumentId}`
+        const response = await axios.get(apiUrl)
         
         if (response.data && response.data.questions) {
           this.questions = response.data.questions
@@ -245,8 +246,9 @@ export default {
       }
 
       try {
+        const apiUrl = process.env.VUE_APP_API_URL ? `${process.env.VUE_APP_API_URL}/questions/${this.selectedDocumentId}/regenerate` : `/api/questions/${this.selectedDocumentId}/regenerate`
         const response = await axios.post(
-          `http://localhost:8000/questions/${this.selectedDocumentId}/regenerate`,
+          apiUrl,
           { feedback: this.feedbackForm.text }
         )
 

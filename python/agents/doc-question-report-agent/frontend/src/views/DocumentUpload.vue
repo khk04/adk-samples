@@ -119,7 +119,7 @@ export default {
   },
   data() {
     return {
-      uploadUrl: 'http://localhost:8000/upload',
+      uploadUrl: process.env.VUE_APP_API_URL ? `${process.env.VUE_APP_API_URL}/upload` : '/api/upload',
       uploadHeaders: {},
       uploadData: {},
       fileList: [],
