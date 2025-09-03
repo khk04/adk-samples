@@ -31,13 +31,13 @@ class DocQuestionReportSystem:
         
         logger.info(f"DocQuestionReportSystem 초기화 완료: {self.system_id}")
     
-    async def process_document(self, document_path: str) -> DocumentAnalysis:
+    async def process_document(self, document_path: str, filename: str) -> DocumentAnalysis:
         """문서를 처리하고 분석 결과를 반환"""
         try:
             logger.info(f"문서 처리 시작: {document_path}")
             
             # DocumentQuestionAgent를 사용하여 문서 분석
-            analysis = await self.doc_question_agent.analyze_document(document_path)
+            analysis = await self.doc_question_agent.analyze_document(document_path, filename)
             
             # 캐시에 저장
             self.document_cache[analysis.document_id] = analysis
@@ -49,22 +49,41 @@ class DocQuestionReportSystem:
             logger.error(f"문서 처리 실패: {str(e)}")
             raise
     
-    async def generate_questions(self, document_id: str) -> QuestionSet:
-        """문서에 대한 질문 세트를 생성"""
+    async def generate_questions(self, document_id: str, step: int = 1) -> QuestionSet:
+        """문서에 대한 Step별 질문 세트를 생성"""
         try:
-            logger.info(f"질문 생성 시작: {document_id}")
+            logger.info(f"Step {step} 질문 생성 시작: {document_id}")
             
             if document_id not in self.document_cache:
                 raise ValueError(f"문서 ID {document_id}를 찾을 수 없습니다")
             
             document = self.document_cache[document_id]
-            questions = await self.doc_question_agent.generate_questions(document)
+            questions = await self.doc_question_agent.generate_question_candidates(document, step)
             
-            logger.info(f"질문 생성 완료: {len(questions.questions)}개")
+            logger.info(f"Step {step} 질문 생성 완료: {len(questions.questions)}개")
             return questions
             
         except Exception as e:
-            logger.error(f"질문 생성 실패: {str(e)}")
+            logger.error(f"Step {step} 질문 생성 실패: {str(e)}")
+            raise
+
+    async def get_next_step_questions(self, document_id: str, current_step: int = 1) -> QuestionSet:
+        """다음 단계 질문을 자동으로 생성"""
+        try:
+            next_step = current_step + 1
+            logger.info(f"다음 단계 질문 생성: Step {next_step}")
+            
+            if document_id not in self.document_cache:
+                raise ValueError(f"문서 ID {document_id}를 찾을 수 없습니다")
+            
+            document = self.document_cache[document_id]
+            questions = await self.doc_question_agent.generate_question_candidates(document, next_step)
+            
+            logger.info(f"Step {next_step} 질문 생성 완료: {len(questions.questions)}개")
+            return questions
+            
+        except Exception as e:
+            logger.error(f"Step {next_step} 질문 생성 실패: {str(e)}")
             raise
     
     async def generate_report(self, request: ReportRequest) -> ReportDraft:
@@ -171,26 +190,69 @@ async def upload_document(file: UploadFile = File(...)):
             tmp_file_path = tmp_file.name
         
         # 문서 처리
-        analysis = await system.process_document(tmp_file_path)
+        analysis = await system.process_document(tmp_file_path, file.filename)
         
         # 임시 파일 삭제
         os.unlink(tmp_file_path)
         
+        # 실제 추출된 문서 내용과 함께 응답
         return {
             "message": "문서 업로드 및 분석 완료",
             "document_id": analysis.document_id,
-            "filename": file.filename
+            "filename": file.filename,
+            "document_type": analysis.document_type,
+            "content": analysis.content,
+            "summary": analysis.summary,
+            "key_topics": analysis.key_topics,
+            "entities": analysis.entities,
+            "metadata": analysis.metadata,
+            "confidence_score": analysis.confidence_score,
+            "analysis_timestamp": analysis.analysis_timestamp.isoformat() if analysis.analysis_timestamp else None
         }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/questions/{document_id}")
-async def get_questions(document_id: str):
-    """문서에 대한 질문 세트 생성"""
+@app.get("/document/{document_id}")
+async def get_document_analysis(document_id: str):
+    """문서 분석 결과 조회"""
     try:
-        questions = await system.generate_questions(document_id)
+        if document_id not in system.document_cache:
+            raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+        
+        analysis = system.document_cache[document_id]
+        return {
+            "document_id": analysis.document_id,
+            "filename": analysis.filename,
+            "document_type": analysis.document_type,
+            "content": analysis.content,
+            "summary": analysis.summary,
+            "key_topics": analysis.key_topics,
+            "entities": analysis.entities,
+            "metadata": analysis.metadata,
+            "confidence_score": analysis.confidence_score,
+            "analysis_timestamp": analysis.analysis_timestamp.isoformat() if analysis.analysis_timestamp else None
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/questions/{document_id}")
+async def get_questions(document_id: str, step: int = 1):
+    """문서에 대한 Step별 질문 세트 생성"""
+    try:
+        questions = await system.generate_questions(document_id, step)
+        return questions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/questions/{document_id}/next")
+async def get_next_step_questions(document_id: str, current_step: int = 1):
+    """다음 단계 질문 자동 생성"""
+    try:
+        questions = await system.get_next_step_questions(document_id, current_step)
         return questions
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
