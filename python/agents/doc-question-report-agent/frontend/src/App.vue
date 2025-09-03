@@ -44,7 +44,8 @@ export default {
   methods: {
     async checkHealth() {
       try {
-        const response = await axios.get('http://localhost:8000/health')
+        const apiUrl = process.env.VUE_APP_API_URL ? `${process.env.VUE_APP_API_URL}/health` : '/api/health'
+        const response = await axios.get(apiUrl)
         if (response.data.status === 'healthy') {
           ElMessage.success('API 서버가 정상적으로 실행 중입니다!')
         }

@@ -162,7 +162,8 @@ export default {
     },
     async checkApiStatus() {
       try {
-        const response = await axios.get('http://localhost:8000/health')
+        const apiUrl = process.env.VUE_APP_API_URL ? `${process.env.VUE_APP_API_URL}/health` : '/api/health'
+        const response = await axios.get(apiUrl)
         if (response.data.status === 'healthy') {
           this.apiStatus = {
             text: '정상',
@@ -178,7 +179,8 @@ export default {
     },
     async getSystemStatus() {
       try {
-        const response = await axios.get('http://localhost:8000/status')
+        const apiUrl = process.env.VUE_APP_API_URL ? `${process.env.VUE_APP_API_URL}/status` : '/api/status'
+        const response = await axios.get(apiUrl)
         this.systemStatus = response.data
       } catch (error) {
         console.error('시스템 상태 조회 실패:', error)
