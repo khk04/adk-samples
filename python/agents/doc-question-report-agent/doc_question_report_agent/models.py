@@ -49,8 +49,8 @@ class DocumentAnalysis(BaseModel):
     key_topics: List[str] = Field(default_factory=list, description="주요 토픽")
     entities: List[Dict[str, Any]] = Field(default_factory=list, description="추출된 엔티티")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="메타데이터")
-    analysis_timestamp: datetime = Field(default_factory=datetime.now, description="분석 시간")
-    confidence_score: float = Field(..., ge=0.0, le=1.0, description="분석 신뢰도")
+    created_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
+    updated_at: datetime = Field(default_factory=datetime.now, description="업데이트 시간")
     
     class Config:
         json_encoders = {
@@ -61,22 +61,24 @@ class DocumentAnalysis(BaseModel):
 class QuestionCandidate(BaseModel):
     """질문 후보 모델"""
     question_id: str = Field(..., description="질문 고유 식별자")
-    question: str = Field(..., description="질문 내용")
+    question_text: str = Field(..., description="질문 내용")
     category: str = Field(..., description="질문 카테고리")
     priority: int = Field(..., ge=1, le=5, description="우선순위 (1-5)")
-    context: str = Field(..., description="질문의 컨텍스트")
-    suggested_report_type: ReportType = Field(..., description="제안하는 리포트 유형")
-    confidence_score: float = Field(..., ge=0.0, le=1.0, description="질문 품질 신뢰도")
+    context_required: bool = Field(default=True, description="컨텍스트 필요 여부")
+    estimated_complexity: str = Field(default="medium", description="예상 복잡도")
+    related_topics: List[str] = Field(default_factory=list, description="관련 토픽")
+    created_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
 
 
 class QuestionSet(BaseModel):
     """질문 세트 모델"""
-    question_set_id: str = Field(..., description="질문 세트 고유 식별자")
+    set_id: str = Field(..., description="질문 세트 고유 식별자")
     document_id: str = Field(..., description="연관된 문서 ID")
-    questions: List[QuestionCandidate] = Field(..., description="질문 후보 리스트")
-    generated_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
-    version: int = Field(default=1, description="질문 세트 버전")
     step: int = Field(default=1, description="질문 생성 단계 (Step)")
+    questions: List[QuestionCandidate] = Field(..., description="질문 후보 리스트")
+    total_questions: int = Field(..., description="총 질문 수")
+    generated_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
+    context_summary: str = Field(default="", description="컨텍스트 요약")
 
 
 class SelectedContext(BaseModel):
@@ -84,18 +86,18 @@ class SelectedContext(BaseModel):
     context_id: str = Field(..., description="컨텍스트 고유 식별자")
     question_set_id: str = Field(..., description="선택된 질문 세트 ID")
     selected_questions: List[str] = Field(..., description="선택된 질문 ID 리스트")
-    report_type: ReportType = Field(..., description="요청한 리포트 유형")
-    custom_requirements: Optional[str] = Field(None, description="추가 요구사항")
-    scope: str = Field(..., description="리포트 범위")
-    criteria: List[str] = Field(default_factory=list, description="분석 기준")
+    summary: str = Field(..., description="선택된 컨텍스트 요약")
+    context_items: List[Dict[str, Any]] = Field(default_factory=list, description="컨텍스트 아이템")
     selected_at: datetime = Field(default_factory=datetime.now, description="선택 시간")
 
 
 class ReportRequest(BaseModel):
     """리포트 생성 요청 모델"""
     request_id: str = Field(..., description="요청 고유 식별자")
-    context: SelectedContext = Field(..., description="선택된 컨텍스트")
+    title: str = Field(..., description="리포트 제목")
     report_type: ReportType = Field(..., description="리포트 유형")
+    selected_context: SelectedContext = Field(..., description="선택된 컨텍스트")
+    document_analysis: DocumentAnalysis = Field(..., description="문서 분석 결과")
     status: ReportStatus = Field(default=ReportStatus.DRAFT, description="리포트 상태")
     include_charts: bool = Field(default=True, description="차트 포함 여부")
     include_summary: bool = Field(default=True, description="요약 포함 여부")
@@ -106,15 +108,16 @@ class ReportRequest(BaseModel):
 class ReportDraft(BaseModel):
     """리포트 초안 모델"""
     draft_id: str = Field(..., description="초안 고유 식별자")
-    request_id: str = Field(..., description="연관된 요청 ID")
     title: str = Field(..., description="리포트 제목")
+    report_type: ReportType = Field(..., description="리포트 유형")
     outline: List[str] = Field(..., description="리포트 아웃라인")
     content: str = Field(..., description="초안 내용")
     key_findings: List[str] = Field(default_factory=list, description="주요 발견사항")
     recommendations: List[str] = Field(default_factory=list, description="권장사항")
-    data_sources: List[str] = Field(default_factory=list, description="데이터 소스")
-    generated_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
     status: ReportStatus = Field(default=ReportStatus.DRAFT, description="상태")
+    created_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
+    updated_at: datetime = Field(default_factory=datetime.now, description="업데이트 시간")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="메타데이터")
 
 
 class FinalReport(BaseModel):
@@ -122,22 +125,21 @@ class FinalReport(BaseModel):
     report_id: str = Field(..., description="리포트 고유 식별자")
     draft_id: str = Field(..., description="연관된 초안 ID")
     title: str = Field(..., description="리포트 제목")
+    report_type: ReportType = Field(..., description="리포트 유형")
     content: str = Field(..., description="최종 내용")
-    executive_summary: str = Field(..., description="집행 요약")
-    methodology: str = Field(..., description="방법론")
-    findings: List[Dict[str, Any]] = Field(..., description="주요 발견사항")
-    conclusions: List[str] = Field(default_factory=list, description="결론")
+    key_findings: List[str] = Field(default_factory=list, description="주요 발견사항")
     recommendations: List[str] = Field(default_factory=list, description="권장사항")
-    appendices: List[Dict[str, Any]] = Field(default_factory=list, description="부록")
-    generated_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
     status: ReportStatus = Field(default=ReportStatus.FINAL, description="상태")
+    created_at: datetime = Field(default_factory=datetime.now, description="생성 시간")
+    updated_at: datetime = Field(default_factory=datetime.now, description="업데이트 시간")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="메타데이터")
 
 
 class FeedbackRequest(BaseModel):
     """피드백 요청 모델"""
     feedback_id: str = Field(..., description="피드백 고유 식별자")
     report_id: str = Field(..., description="연관된 리포트 ID")
-    user_feedback: str = Field(..., description="사용자 피드백")
+    feedback_text: str = Field(..., description="피드백 내용")
     satisfaction_score: int = Field(..., ge=1, le=5, description="만족도 점수 (1-5)")
     improvement_areas: List[str] = Field(default_factory=list, description="개선 영역")
     new_requirements: Optional[str] = Field(None, description="새로운 요구사항")
