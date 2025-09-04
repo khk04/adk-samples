@@ -17,7 +17,7 @@
         <el-card class="upload-card">
           <template #header>
             <div class="card-header">
-              <el-icon><Upload /></el-icon>
+              <i class="el-icon-upload"></i>
               <span>문서 업로드</span>
             </div>
           </template>
@@ -35,7 +35,7 @@
               accept=".pdf,.docx,.txt,.html,.htm,.md,.csv,.xlsx,.xls"
               multiple
             >
-              <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+              <i class="el-icon-upload"></i>
               <div class="el-upload__text">
                 <em>클릭하여 파일을 선택하거나</em><br>
                 <em>파일을 이 영역에 끌어다 놓으세요</em>
@@ -67,7 +67,7 @@
               :loading="uploading"
               :disabled="!selectedFile"
             >
-              <el-icon><Upload /></el-icon>
+              <i class="el-icon-upload"></i>
               문서 업로드 및 분석 시작
             </el-button>
             
@@ -76,7 +76,7 @@
               @click="resetUpload"
               :disabled="!selectedFile"
             >
-              <el-icon><Refresh /></el-icon>
+              <i class="el-icon-refresh"></i>
               다시 선택
             </el-button>
           </div>
@@ -86,7 +86,7 @@
         <el-card v-if="uploading" class="progress-card">
           <template #header>
             <div class="card-header">
-              <el-icon><Loading /></el-icon>
+              <i class="el-icon-loading"></i>
               <span>문서 처리 중...</span>
             </div>
           </template>
@@ -105,7 +105,7 @@
         <el-card v-if="documentAnalysis" class="result-card">
           <template #header>
             <div class="card-header">
-              <el-icon><Document /></el-icon>
+              <i class="el-icon-document"></i>
               <span>문서 분석 완료</span>
             </div>
           </template>
@@ -219,7 +219,7 @@
               size="large" 
               @click="proceedToQuestions"
             >
-              <el-icon><ArrowRight /></el-icon>
+              <i class="el-icon-arrow-right"></i>
               다음 단계: 질문 생성
             </el-button>
           </div>
@@ -230,41 +230,28 @@
 </template>
 
 <script>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { 
-  Upload, UploadFilled, Refresh, Loading, Document, ArrowRight 
-} from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import axios from 'axios'
 
 export default {
   name: 'DocumentUpload',
-  components: {
-    Upload,
-    UploadFilled,
-    Refresh,
-    Loading,
-    Document,
-    ArrowRight
-  },
-  setup() {
-    const router = useRouter()
-    const uploadRef = ref()
-    const fileList = ref([])
-    const selectedFile = ref(null)
-    const uploading = ref(false)
-    const uploadProgress = ref(0)
-    const progressText = ref('')
-    const documentAnalysis = ref(null)
-    const activeTab = ref('basic')
-
-    const handleFileChange = (file) => {
-      selectedFile.value = file.raw
-      fileList.value = [file]
+  data() {
+    return {
+      fileList: [],
+      selectedFile: null,
+      uploading: false,
+      uploadProgress: 0,
+      progressText: '',
+      documentAnalysis: null,
+      activeTab: 'basic'
     }
+  },
+  methods: {
+    handleFileChange(file) {
+      this.selectedFile = file.raw
+      this.fileList = [file]
+    },
 
-    const beforeUpload = (file) => {
+    beforeUpload(file) {
       const isValidType = [
         'application/pdf',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -279,46 +266,46 @@ export default {
       const isValidSize = file.size / 1024 / 1024 < 10
 
       if (!isValidType) {
-        ElMessage.error('지원하지 않는 파일 형식입니다.')
+        this.$message.error('지원하지 않는 파일 형식입니다.')
         return false
       }
 
       if (!isValidSize) {
-        ElMessage.error('파일 크기는 10MB 이하여야 합니다.')
+        this.$message.error('파일 크기는 10MB 이하여야 합니다.')
         return false
       }
 
       return false // 자동 업로드 방지
-    }
+    },
 
-    const uploadDocument = async () => {
-      if (!selectedFile.value) {
-        ElMessage.warning('업로드할 파일을 선택해주세요.')
+    async uploadDocument() {
+      if (!this.selectedFile) {
+        this.$message.warning('업로드할 파일을 선택해주세요.')
         return
       }
 
-      uploading.value = true
-      uploadProgress.value = 0
-      progressText.value = '파일 업로드 중...'
+      this.uploading = true
+      this.uploadProgress = 0
+      this.progressText = '파일 업로드 중...'
 
       try {
         // 파일 업로드 진행률 시뮬레이션
         const progressInterval = setInterval(() => {
-          if (uploadProgress.value < 90) {
-            uploadProgress.value += 10
-            if (uploadProgress.value < 30) {
-              progressText.value = '파일 업로드 중...'
-            } else if (uploadProgress.value < 60) {
-              progressText.value = '문서 내용 추출 중...'
-            } else if (uploadProgress.value < 90) {
-              progressText.value = 'AI 분석 중...'
+          if (this.uploadProgress < 90) {
+            this.uploadProgress += 10
+            if (this.uploadProgress < 30) {
+              this.progressText = '파일 업로드 중...'
+            } else if (this.uploadProgress < 60) {
+              this.progressText = '문서 내용 추출 중...'
+            } else if (this.uploadProgress < 90) {
+              this.progressText = 'AI 분석 중...'
             }
           }
         }, 500)
 
         // 실제 파일 업로드
         const formData = new FormData()
-        formData.append('file', selectedFile.value)
+        formData.append('file', this.selectedFile)
 
         const apiUrl = process.env.VUE_APP_API_URL ? `${process.env.VUE_APP_API_URL}/upload` : '/api/upload'
         const response = await axios.post(apiUrl, formData, {
@@ -328,14 +315,14 @@ export default {
         })
 
         clearInterval(progressInterval)
-        uploadProgress.value = 100
-        progressText.value = '분석 완료!'
+        this.uploadProgress = 100
+        this.progressText = '분석 완료!'
 
-        // 실제 백엔드 응답에서 분석 결과 가져오기 (업로드 응답에 포함된 데이터 사용)
-        documentAnalysis.value = {
+        // 실제 백엔드 응답에서 분석 결과 가져오기
+        this.documentAnalysis = {
           document_id: response.data.document_id,
           filename: response.data.filename,
-          document_type: response.data.document_type || getFileExtension(selectedFile.value.name).toLowerCase(),
+          document_type: response.data.document_type || this.getFileExtension(this.selectedFile.name).toLowerCase(),
           summary: response.data.summary || '문서 내용을 분석한 결과, 주요 내용과 핵심 토픽을 추출했습니다.',
           key_topics: response.data.key_topics || ['주제 분석', '내용 요약', '핵심 정보 추출'],
           entities: response.data.entities || [],
@@ -345,64 +332,64 @@ export default {
           confidence_score: response.data.confidence_score || 0.95
         }
 
-        ElMessage.success('문서 분석이 완료되었습니다!')
+        this.$message.success('문서 분석이 완료되었습니다!')
         
         // 잠시 후 다음 단계로 이동
         setTimeout(() => {
-          proceedToQuestions()
+          this.proceedToQuestions()
         }, 2000)
 
       } catch (error) {
         console.error('업로드 오류:', error)
-        ElMessage.error('문서 업로드 중 오류가 발생했습니다. 다시 시도해주세요.')
+        this.$message.error('문서 업로드 중 오류가 발생했습니다. 다시 시도해주세요.')
       } finally {
-        uploading.value = false
+        this.uploading = false
       }
-    }
+    },
 
-    const resetUpload = () => {
-      selectedFile.value = null
-      fileList.value = []
-      documentAnalysis.value = null
-      uploadProgress.value = 0
-      progressText.value = ''
-      uploadRef.value?.clearFiles()
-    }
+    resetUpload() {
+      this.selectedFile = null
+      this.fileList = []
+      this.documentAnalysis = null
+      this.uploadProgress = 0
+      this.progressText = ''
+      this.$refs.uploadRef?.clearFiles()
+    },
 
-    const proceedToQuestions = () => {
+    proceedToQuestions() {
       // 질문 생성 페이지로 이동하면서 문서 ID 전달
-      router.push({
+      this.$router.push({
         path: '/questions',
         query: { 
-          documentId: documentAnalysis.value.document_id,
-          filename: selectedFile.value.name
+          documentId: this.documentAnalysis.document_id,
+          filename: this.selectedFile.name
         }
       })
-    }
+    },
 
-    const formatFileSize = (bytes) => {
+    formatFileSize(bytes) {
       if (bytes === 0) return '0 Bytes'
       const k = 1024
       const sizes = ['Bytes', 'KB', 'MB', 'GB']
       const i = Math.floor(Math.log(bytes) / Math.log(k))
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-    }
+    },
 
-    const getFileExtension = (filename) => {
+    getFileExtension(filename) {
       return filename.split('.').pop().toUpperCase()
-    }
+    },
 
-    const formatDate = (timestamp) => {
+    formatDate(timestamp) {
       return new Date(timestamp).toLocaleString('ko-KR')
-    }
+    },
 
-    const getConfidenceColor = (score) => {
+    getConfidenceColor(score) {
       if (score >= 0.8) return '#67C23A'
       if (score >= 0.6) return '#E6A23C'
       return '#F56C6C'
-    }
+    },
 
-    const formatDateTime = (timestamp) => {
+    formatDateTime(timestamp) {
       if (!timestamp) return 'N/A'
       return new Date(timestamp).toLocaleString('ko-KR', {
         year: 'numeric',
@@ -412,9 +399,9 @@ export default {
         minute: '2-digit',
         second: '2-digit'
       })
-    }
+    },
 
-    const formatMetadataLabel = (key) => {
+    formatMetadataLabel(key) {
       const labelMap = {
         'original_filename': '원본 파일명',
         'content_length': '내용 길이',
@@ -422,28 +409,6 @@ export default {
         'agent_version': '에이전트 버전'
       }
       return labelMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-    }
-
-    return {
-      uploadRef,
-      fileList,
-      selectedFile,
-      uploading,
-      uploadProgress,
-      progressText,
-      documentAnalysis,
-      activeTab,
-      handleFileChange,
-      beforeUpload,
-      uploadDocument,
-      resetUpload,
-      proceedToQuestions,
-      formatFileSize,
-      getFileExtension,
-      formatDate,
-      getConfidenceColor,
-      formatDateTime,
-      formatMetadataLabel
     }
   }
 }

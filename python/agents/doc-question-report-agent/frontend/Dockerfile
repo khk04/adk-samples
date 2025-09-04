@@ -1,32 +1,32 @@
-# Multi-stage build for Vue.js frontend
+# Vue.js 프론트엔드 Dockerfile
 FROM node:18-alpine as build-stage
 
-# Set working directory
+# 작업 디렉토리 설정
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# package.json 복사
+COPY package.json ./
 
-# Install dependencies (including dev dependencies for build)
-RUN npm ci
+# 의존성 설치 (npm install 사용)
+RUN npm install --legacy-peer-deps
 
-# Copy source code
+# 소스 코드 복사
 COPY . .
 
-# Build the app
+# Vue.js 앱 빌드
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine as production-stage
+# Nginx를 사용한 프로덕션 스테이지
+FROM nginx:stable-alpine as production-stage
 
-# Copy built app to nginx
+# 빌드된 파일을 nginx 디렉토리로 복사
 COPY --from=build-stage /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
+# Nginx 설정 파일 복사
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Expose port 80
+# 포트 노출
 EXPOSE 80
 
-# Start nginx
+# Nginx 실행
 CMD ["nginx", "-g", "daemon off;"]
