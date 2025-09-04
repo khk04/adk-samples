@@ -26,7 +26,7 @@ from .models import (
     ReportRequest, ReportDraft, FinalReport, FeedbackRequest,
     DocumentType, ReportType, ReportStatus
 )
-from .utils import DocumentProcessor, ReportGenerator
+from .utils import DocumentProcessor
 
 
 class DocumentUploadInput(BaseModel):

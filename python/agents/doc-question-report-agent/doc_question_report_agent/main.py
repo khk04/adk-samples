@@ -193,25 +193,3 @@ class DocQuestionReportSystem:
 system = DocQuestionReportSystem()
 
 
-async def main():
-    """메인 실행 함수"""
-    logger.info("Document Question & Report Agent ADK 시스템 시작")
-    
-    # 시스템 상태 확인
-    status = await system.get_system_status()
-    logger.info(f"시스템 상태: {status}")
-    
-    # 예시 사용법
-    try:
-        # 사용자 요청 처리 예시
-        response = await system.process_user_request(
-            "안녕하세요! 문서 분석 및 보고서 생성 시스템입니다."
-        )
-        logger.info(f"에이전트 응답: {response}")
-        
-    except Exception as e:
-        logger.error(f"시스템 실행 중 오류: {str(e)}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

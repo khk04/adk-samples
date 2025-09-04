@@ -42,7 +42,7 @@ from .models import (
 )
 
 # 유틸리티 클래스들
-from .utils import DocumentProcessor, ReportGenerator
+from .utils import DocumentProcessor
 
 # 도구들
 from .tools import (
@@ -82,7 +82,6 @@ __all__ = [
     
     # 유틸리티 클래스들
     "DocumentProcessor",
-    "ReportGenerator",
     
     # 도구들
     "analyze_document",
