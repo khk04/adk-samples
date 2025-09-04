@@ -1,309 +1,217 @@
-"""
-메인 시스템 클래스
-"""
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""ADK 기반 문서 질문 및 보고서 생성 에이전트 메인 모듈"""
 
 import asyncio
-import uuid
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+import os
+from typing import Any, Dict, List, Optional
 from loguru import logger
-import uvicorn
-from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.responses import JSONResponse
 
-from .agents import DocumentQuestionAgent, ReportAgent
-from .models import (
-    DocumentAnalysis, QuestionSet, SelectedContext, ReportRequest,
-    ReportDraft, FinalReport, FeedbackRequest, ProcessingStatus,
-    ProcessingTask
+from .agents import root_agent, document_question_agent, report_agent
+from .tools import (
+    document_cache, question_cache, report_cache,
+    get_document_status, list_available_documents
 )
 
 
 class DocQuestionReportSystem:
-    """문서 질문 및 리포트 생성 시스템의 메인 클래스"""
+    """ADK 기반 문서 질문 및 보고서 생성 시스템"""
     
-    def __init__(self, openai_client=None):
-        self.system_id = f"doc_question_report_system_{uuid.uuid4().hex[:8]}"
-        self.doc_question_agent = DocumentQuestionAgent(openai_client)
-        self.report_agent = ReportAgent(openai_client)
-        self.active_tasks: Dict[str, ProcessingTask] = {}
-        self.document_cache: Dict[str, DocumentAnalysis] = {}
+    def __init__(self):
+        self.main_agent = root_agent
+        self.doc_question_agent = document_question_agent
+        self.report_agent = report_agent
+        logger.info("DocQuestionReportSystem ADK 에이전트 초기화 완료")
+    
+    async def process_user_request(self, user_input: str, context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        사용자 요청을 처리합니다.
         
-        logger.info(f"DocQuestionReportSystem 초기화 완료: {self.system_id}")
-    
-    async def process_document(self, document_path: str, filename: str) -> DocumentAnalysis:
-        """문서를 처리하고 분석 결과를 반환"""
+        Args:
+            user_input: 사용자 입력
+            context: 추가 컨텍스트 정보
+            
+        Returns:
+            str: 에이전트 응답
+        """
         try:
-            logger.info(f"문서 처리 시작: {document_path}")
-            
-            # DocumentQuestionAgent를 사용하여 문서 분석
-            analysis = await self.doc_question_agent.analyze_document(document_path, filename)
-            
-            # 캐시에 저장
-            self.document_cache[analysis.document_id] = analysis
-            
-            logger.info(f"문서 처리 완료: {analysis.document_id}")
-            return analysis
+            # 메인 에이전트를 통해 사용자 요청 처리
+            response = await self.main_agent.run(user_input, context=context)
+            return response
             
         except Exception as e:
-            logger.error(f"문서 처리 실패: {str(e)}")
-            raise
+            logger.error(f"사용자 요청 처리 실패: {str(e)}")
+            return f"요청 처리 중 오류가 발생했습니다: {str(e)}"
     
-    async def generate_questions(self, document_id: str, step: int = 1) -> QuestionSet:
-        """문서에 대한 Step별 질문 세트를 생성"""
+    async def analyze_document(self, file_path: str, filename: str) -> Dict[str, Any]:
+        """
+        문서를 분석합니다.
+        
+        Args:
+            file_path: 파일 경로
+            filename: 파일명
+            
+        Returns:
+            Dict[str, Any]: 분석 결과
+        """
         try:
-            logger.info(f"Step {step} 질문 생성 시작: {document_id}")
-            
-            if document_id not in self.document_cache:
-                raise ValueError(f"문서 ID {document_id}를 찾을 수 없습니다")
-            
-            document = self.document_cache[document_id]
-            questions = await self.doc_question_agent.generate_question_candidates(document, step)
-            
-            logger.info(f"Step {step} 질문 생성 완료: {len(questions.questions)}개")
-            return questions
-            
-        except Exception as e:
-            logger.error(f"Step {step} 질문 생성 실패: {str(e)}")
-            raise
-
-    async def get_next_step_questions(self, document_id: str, current_step: int = 1) -> QuestionSet:
-        """다음 단계 질문을 자동으로 생성"""
-        try:
-            next_step = current_step + 1
-            logger.info(f"다음 단계 질문 생성: Step {next_step}")
-            
-            if document_id not in self.document_cache:
-                raise ValueError(f"문서 ID {document_id}를 찾을 수 없습니다")
-            
-            document = self.document_cache[document_id]
-            questions = await self.doc_question_agent.generate_question_candidates(document, next_step)
-            
-            logger.info(f"Step {next_step} 질문 생성 완료: {len(questions.questions)}개")
-            return questions
-            
-        except Exception as e:
-            logger.error(f"Step {next_step} 질문 생성 실패: {str(e)}")
-            raise
-    
-    async def generate_report(self, request: ReportRequest) -> ReportDraft:
-        """선택된 질문을 기반으로 리포트 초안 생성"""
-        try:
-            logger.info(f"리포트 생성 시작: {request.request_id}")
-            
-            # ReportAgent를 사용하여 리포트 생성
-            draft = await self.report_agent.generate_draft(request)
-            
-            logger.info(f"리포트 초안 생성 완료: {draft.draft_id}")
-            return draft
-            
-        except Exception as e:
-            logger.error(f"리포트 생성 실패: {str(e)}")
-            raise
-    
-    async def finalize_report(self, draft_id: str, feedback: str = "") -> FinalReport:
-        """리포트 초안을 최종본으로 완성"""
-        try:
-            logger.info(f"리포트 최종화 시작: {draft_id}")
-            
-            # ReportAgent를 사용하여 최종 리포트 생성
-            final_report = await self.report_agent.finalize_report(draft_id, feedback)
-            
-            logger.info(f"리포트 최종화 완료: {final_report.report_id}")
-            return final_report
-            
-        except Exception as e:
-            logger.error(f"리포트 최종화 실패: {str(e)}")
-            raise
-    
-    async def regenerate_questions(self, document_id: str, feedback: str) -> QuestionSet:
-        """피드백을 기반으로 새로운 질문 세트 생성"""
-        try:
-            logger.info(f"질문 재생성 시작: {document_id}")
-            
-            if document_id not in self.document_cache:
-                raise ValueError(f"문서 ID {document_id}를 찾을 수 없습니다")
-            
-            document = self.document_cache[document_id]
-            new_questions = await self.doc_question_agent.regenerate_questions(
-                document, feedback
+            # Document Question Agent를 통해 문서 분석
+            response = await self.doc_question_agent.run(
+                f"다음 문서를 분석해주세요: {filename}",
+                context={"file_path": file_path, "filename": filename}
             )
             
-            logger.info(f"질문 재생성 완료: {len(new_questions.questions)}개")
-            return new_questions
+            return {
+                "success": True,
+                "response": response,
+                "document_id": list(document_cache.keys())[-1] if document_cache else None
+            }
             
         except Exception as e:
-            logger.error(f"질문 재생성 실패: {str(e)}")
-            raise
+            logger.error(f"문서 분석 실패: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
     
-    def get_system_status(self) -> Dict:
-        """시스템 상태 정보 반환"""
-        return {
-            "system_id": self.system_id,
-            "status": "running",
-            "active_tasks": len(self.active_tasks),
-            "cached_documents": len(self.document_cache),
-            "timestamp": datetime.now().isoformat()
-        }
+    async def generate_questions(self, document_id: str, step: int = 1) -> Dict[str, Any]:
+        """
+        질문을 생성합니다.
+        
+        Args:
+            document_id: 문서 ID
+            step: 질문 단계
+            
+        Returns:
+            Dict[str, Any]: 질문 생성 결과
+        """
+        try:
+            # Document Question Agent를 통해 질문 생성
+            response = await self.doc_question_agent.run(
+                f"문서 {document_id}에 대해 {step}단계 질문을 생성해주세요.",
+                context={"document_id": document_id, "step": step}
+            )
+            
+            return {
+                "success": True,
+                "response": response,
+                "question_set_id": list(question_cache.keys())[-1] if question_cache else None
+            }
+            
+        except Exception as e:
+            logger.error(f"질문 생성 실패: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def generate_report(self, title: str, report_type: str, document_id: str, selected_questions: List[str]) -> Dict[str, Any]:
+        """
+        보고서를 생성합니다.
+        
+        Args:
+            title: 보고서 제목
+            report_type: 보고서 유형
+            document_id: 문서 ID
+            selected_questions: 선택된 질문 목록
+            
+        Returns:
+            Dict[str, Any]: 보고서 생성 결과
+        """
+        try:
+            # Report Agent를 통해 보고서 생성
+            response = await self.report_agent.run(
+                f"'{title}' 제목으로 {report_type} 유형의 보고서를 생성해주세요.",
+                context={
+                    "title": title,
+                    "report_type": report_type,
+                    "document_id": document_id,
+                    "selected_questions": selected_questions
+                }
+            )
+            
+            return {
+                "success": True,
+                "response": response,
+                "draft_id": list(report_cache.keys())[-1] if report_cache else None
+            }
+            
+        except Exception as e:
+            logger.error(f"보고서 생성 실패: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def get_system_status(self) -> Dict[str, Any]:
+        """
+        시스템 상태를 조회합니다.
+        
+        Returns:
+            Dict[str, Any]: 시스템 상태 정보
+        """
+        try:
+            # 문서 목록 조회
+            documents = list_available_documents()
+            
+            return {
+                "status": "running",
+                "agents": {
+                    "main_agent": self.main_agent.name,
+                    "doc_question_agent": self.doc_question_agent.name,
+                    "report_agent": self.report_agent.name
+                },
+                "cache_stats": {
+                    "documents": len(document_cache),
+                    "questions": len(question_cache),
+                    "reports": len(report_cache)
+                },
+                "documents": documents
+            }
+            
+        except Exception as e:
+            logger.error(f"시스템 상태 조회 실패: {str(e)}")
+            return {
+                "status": "error",
+                "error": str(e)
+            }
 
 
-# FastAPI 앱 생성
-app = FastAPI(
-    title="Document Question & Report Agent",
-    description="2-Agent 시스템으로 문서 처리와 질문 응답, 보고서 생성을 수행하는 AI 에이전트",
-    version="0.1.0"
-)
-
-# 시스템 인스턴스 생성
+# 시스템 인스턴스
 system = DocQuestionReportSystem()
 
 
-@app.get("/")
-async def root():
-    """루트 엔드포인트"""
-    return {"message": "Document Question & Report Agent API", "status": "running"}
-
-
-@app.get("/health")
-async def health_check():
-    """헬스체크 엔드포인트"""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
-
-@app.get("/status")
-async def get_status():
-    """시스템 상태 조회"""
-    return system.get_system_status()
-
-
-@app.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
-    """문서 업로드 및 분석"""
-    try:
-        # 임시 파일로 저장
-        import tempfile
-        import os
-        
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
-            content = await file.read()
-            tmp_file.write(content)
-            tmp_file_path = tmp_file.name
-        
-        # 문서 처리
-        analysis = await system.process_document(tmp_file_path, file.filename)
-        
-        # 임시 파일 삭제
-        os.unlink(tmp_file_path)
-        
-        # 실제 추출된 문서 내용과 함께 응답
-        return {
-            "message": "문서 업로드 및 분석 완료",
-            "document_id": analysis.document_id,
-            "filename": file.filename,
-            "document_type": analysis.document_type,
-            "content": analysis.content,
-            "summary": analysis.summary,
-            "key_topics": analysis.key_topics,
-            "entities": analysis.entities,
-            "metadata": analysis.metadata,
-            "confidence_score": analysis.confidence_score,
-            "analysis_timestamp": analysis.analysis_timestamp.isoformat() if analysis.analysis_timestamp else None
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/document/{document_id}")
-async def get_document_analysis(document_id: str):
-    """문서 분석 결과 조회"""
-    try:
-        if document_id not in system.document_cache:
-            raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
-        
-        analysis = system.document_cache[document_id]
-        return {
-            "document_id": analysis.document_id,
-            "filename": analysis.filename,
-            "document_type": analysis.document_type,
-            "content": analysis.content,
-            "summary": analysis.summary,
-            "key_topics": analysis.key_topics,
-            "entities": analysis.entities,
-            "metadata": analysis.metadata,
-            "confidence_score": analysis.confidence_score,
-            "analysis_timestamp": analysis.analysis_timestamp.isoformat() if analysis.analysis_timestamp else None
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/questions/{document_id}")
-async def get_questions(document_id: str, step: int = 1):
-    """문서에 대한 Step별 질문 세트 생성"""
-    try:
-        questions = await system.generate_questions(document_id, step)
-        return questions
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/questions/{document_id}/next")
-async def get_next_step_questions(document_id: str, current_step: int = 1):
-    """다음 단계 질문 자동 생성"""
-    try:
-        questions = await system.get_next_step_questions(document_id, current_step)
-        return questions
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/report")
-async def create_report(request: ReportRequest):
-    """리포트 생성"""
-    try:
-        draft = await system.generate_report(request)
-        return draft
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/report/{draft_id}/finalize")
-async def finalize_report(draft_id: str, feedback: str = ""):
-    """리포트 최종화"""
-    try:
-        final_report = await system.finalize_report(draft_id, feedback)
-        return final_report
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/questions/{document_id}/regenerate")
-async def regenerate_questions(document_id: str, feedback: str):
-    """질문 재생성"""
-    try:
-        new_questions = await system.regenerate_questions(document_id, feedback)
-        return new_questions
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 async def main():
-    """메인 함수"""
-    logger.info("DocQuestionReportSystem 시작 중...")
+    """메인 실행 함수"""
+    logger.info("Document Question & Report Agent ADK 시스템 시작")
     
-    # 시스템 초기화
-    logger.info("시스템 초기화 완료")
+    # 시스템 상태 확인
+    status = await system.get_system_status()
+    logger.info(f"시스템 상태: {status}")
     
-    return system
+    # 예시 사용법
+    try:
+        # 사용자 요청 처리 예시
+        response = await system.process_user_request(
+            "안녕하세요! 문서 분석 및 보고서 생성 시스템입니다."
+        )
+        logger.info(f"에이전트 응답: {response}")
+        
+    except Exception as e:
+        logger.error(f"시스템 실행 중 오류: {str(e)}")
 
 
 if __name__ == "__main__":
-    # FastAPI 서버 실행
-    logger.info("FastAPI 서버 시작 중...")
-    uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=8000,
-        log_level="info"
-    )
+    asyncio.run(main())
