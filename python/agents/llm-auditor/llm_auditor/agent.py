@@ -23,9 +23,8 @@ from .sub_agents.reviser import reviser_agent
 llm_auditor = SequentialAgent(
     name='llm_auditor',
     description=(
-        'Evaluates LLM-generated answers, verifies actual accuracy using the'
-        ' web, and refines the response to ensure alignment with real-world'
-        ' knowledge.'
+        'LLM이 생성한 답변을 평가하고, 웹을 사용하여 실제 정확성을 검증하며,'
+        ' 실제 세계 지식과의 일치를 보장하기 위해 응답을 개선합니다.'
     ),
     sub_agents=[critic_agent, reviser_agent],
 )
