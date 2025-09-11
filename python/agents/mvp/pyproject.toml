@@ -1,0 +1,33 @@
+[project]
+name = "mvp-report-generator"
+version = "0.1.0"
+description = "데이터 기반 자동 리포트 생성 MVP - CSV 데이터를 분석하여 한국어 리포트를 자동 생성하고 품질을 평가합니다."
+authors = [
+    {name = "MVP Developer", email = "developer@example.com"}
+]
+license = "MIT"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pandas = "^2.1.1"
+google-adk = { version = ">=0.5.0", extras = ["eval"] }
+google-genai = "^1.21.1"
+pydantic = "^2.10.6"
+python-dotenv = "^1.0.1"
+
+openpyxl = "^3.1.2"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pytest-asyncio = "^0.26.0"
+black = "^23.11.0"
+flake8 = "^6.1.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
