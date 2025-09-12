@@ -5,6 +5,7 @@ from google.adk.agents import SequentialAgent, LoopAgent, Agent
 from google.adk.agents.callback_context import CallbackContext
 
 from .sub_agents.generation.report_generation_agent import data_analysis_report_agent
+from .sub_agents.artifact_save.artifact_save_agent import artifact_save_agent
 from .sub_agents.evaluation.report_evaluation_agent import report_evaluation_agent
 from .sub_agents.evaluation.tools.condition_checker_tool import condition_checker_tool
 from .prompt import get_checker_prompt
@@ -22,16 +23,17 @@ def set_session(callback_context: CallbackContext):
     callback_context.state["loop_iteration"] = 0
 
 
-# 데이터 분석 및 리포트 생성, 평가를 순차적으로 실행하는 에이전트
+# 아티팩트 저장, 데이터 분석, 리포트 생성, 평가를 순차적으로 실행하는 에이전트
 data_analysis_report_evaluation_agent = SequentialAgent(
     name="data_analysis_report_evaluation_agent",
     description=(
-        "CSV와 Excel 형식의 데이터를 분석하여 리포트를 생성하고 품질을 평가합니다.\n"
-        "1. 데이터 분석 및 리포트 생성 에이전트를 호출하여 데이터 분석 및 리포트 생성\n"
-        "2. 리포트 평가 에이전트를 호출하여 생성된 리포트의 품질 평가\n"
+        "파일을 분석하여 리포트를 생성하고 품질을 평가합니다.\n"
+        "1. artifact_save_agent로 사용자 파일을 아티팩트로 저장\n"
+        "2. data_analysis_report_agent 호출하여 데이터 분석 및 리포트 생성\n"
+        "3. 리포트 평가 에이전트를 호출하여 생성된 리포트의 품질 평가\n"
         "지원 형식: CSV, Excel"
     ),
-    sub_agents=[data_analysis_report_agent, report_evaluation_agent],
+    sub_agents=[artifact_save_agent, data_analysis_report_agent, report_evaluation_agent],
 )
 
 
@@ -50,8 +52,9 @@ checker_agent = Agent(
 data_report_generator = LoopAgent(
     name="data_report_generator",
     description=(
-        "CSV와 Excel 형식의 사용자 데이터를 기반으로 고품질 리포트를 생성합니다.\n"
+        "사용자 데이터를 기반으로 고품질 리포트를 생성합니다.\n"
         "품질 기준을 만족할 때까지 데이터 분석, 리포트 생성과 평가를 반복합니다."
+        "만약 분석할 데이터가 없으면 작업을 종료합니다."
     ),
     sub_agents=[
         data_analysis_report_evaluation_agent,  # 데이터 분석, 리포트 생성 및 평가
