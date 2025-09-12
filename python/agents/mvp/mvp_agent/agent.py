@@ -16,7 +16,7 @@ def set_session(callback_context: CallbackContext):
     """
     callback_context.state["unique_id"] = str(uuid.uuid4())
     callback_context.state["timestamp"] = datetime.datetime.now(
-        ZoneInfo("UTC")
+        ZoneInfo("Asia/Seoul")
     ).isoformat()
     callback_context.state["loop_iteration"] = 0
 
