@@ -13,3 +13,4 @@ mkdir -p data reports static
 # main.py 직접 실행
 echo "📊 FastAPI 서버를 시작합니다 (포트 8000)..."
 python main.py
+
