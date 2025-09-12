@@ -1,7 +1,7 @@
 [project]
-name = "mvp-report-generator"
-version = "0.1.0"
-description = "데이터 기반 자동 리포트 생성 MVP - CSV 데이터를 분석하여 한국어 리포트를 자동 생성하고 품질을 평가합니다."
+name = "data-report-generator"
+version = "0.2.0"
+description = "데이터 분석 및 리포트 생성 시스템 - CSV와 Excel 형식의 데이터를 분석하여 한국어 리포트를 자동 생성하고 품질을 평가합니다."
 authors = [
     {name = "MVP Developer", email = "developer@example.com"}
 ]

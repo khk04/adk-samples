@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Optional
 import json
 
-from mvp_agent.agent import mvp_report_generator
+from mvp_agent.agent import data_report_generator
 from mvp_agent.config import DATA_DIR, REPORTS_DIR
 
-app = FastAPI(title="MVP Report Generator", version="0.1.0")
+app = FastAPI(title="Data Report Generator", version="0.2.0")
 
 # 정적 파일 서빙을 위한 디렉토리 설정
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -35,13 +35,13 @@ async def read_root():
     </head>
     <body>
         <div class="container">
-            <h1>📊 MVP Report Generator</h1>
-            <p>CSV 데이터를 업로드하여 자동으로 비즈니스 리포트를 생성합니다.</p>
+            <h1>📊 Data Report Generator</h1>
+            <p>CSV와 Excel 데이터를 업로드하여 자동으로 비즈니스 리포트를 생성합니다.</p>
             
             <div class="upload-area">
-                <h3>CSV 파일 업로드</h3>
+                <h3>데이터 파일 업로드</h3>
                 <form action="/upload" method="post" enctype="multipart/form-data">
-                    <input type="file" name="file" accept=".csv" required>
+                    <input type="file" name="file" accept=".csv,.xlsx,.xls" required>
                     <br><br>
                     <button type="submit" class="btn">리포트 생성 시작</button>
                 </form>
@@ -63,9 +63,9 @@ async def read_root():
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
-    """CSV 파일 업로드 및 리포트 생성"""
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="CSV 파일만 업로드 가능합니다.")
+    """데이터 파일 업로드 및 리포트 생성"""
+    if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="CSV 또는 Excel 파일만 업로드 가능합니다.")
     
     # 업로드된 파일 저장
     file_path = DATA_DIR / file.filename
