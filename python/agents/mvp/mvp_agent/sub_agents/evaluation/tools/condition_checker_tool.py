@@ -1,5 +1,5 @@
 from google.adk.tools import ToolContext, FunctionTool
-from ..config import QUALITY_THRESHOLD, MAX_ITERATIONS
+from ....config import QUALITY_THRESHOLD, MAX_ITERATIONS
 
 
 def check_condition_and_escalate(tool_context: ToolContext) -> dict:

@@ -6,7 +6,7 @@ from google.adk.agents.callback_context import CallbackContext
 
 from .sub_agents.generation.report_generation_agent import report_generation_agent
 from .sub_agents.evaluation.report_evaluation_agent import report_evaluation_agent
-from .tools.condition_checker_tool import condition_checker_tool
+from .sub_agents.evaluation.tools.condition_checker_tool import condition_checker_tool
 from .config import QUALITY_THRESHOLD, MAX_ITERATIONS
 
 

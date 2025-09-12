@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from typing import Optional
 from google.adk.tools import ToolContext, FunctionTool
-from ..config import SAMPLE_DATA_PATH
+from ....config import SAMPLE_DATA_PATH
 
 
 def analyze_csv_data(tool_context: ToolContext, csv_path: Optional[str] = None) -> dict:

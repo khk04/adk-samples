@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from google.adk.tools import ToolContext, FunctionTool
-from ..config import REPORTS_DIR
+from ....config import REPORTS_DIR
 
 
 def generate_report(tool_context: ToolContext, report_content: str) -> dict:

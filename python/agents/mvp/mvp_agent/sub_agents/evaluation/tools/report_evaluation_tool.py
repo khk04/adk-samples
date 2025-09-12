@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from google.adk.tools import ToolContext, FunctionTool
-from ..config import QUALITY_WEIGHTS
+from ....config import QUALITY_WEIGHTS
 
 
 def evaluate_report_quality(tool_context: ToolContext) -> dict:

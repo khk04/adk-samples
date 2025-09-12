@@ -1,8 +1,8 @@
 from google.adk.agents import Agent
 from ...config import GENAI_MODEL
 from ...prompt import REPORT_GENERATION_PROMPT
-from ...tools.csv_analysis_tool import csv_analysis_tool
-from ...tools.report_generation_tool import report_generation_tool
+from .tools.csv_analysis_tool import csv_analysis_tool
+from .tools.report_generation_tool import report_generation_tool
 
 
 # 리포트 생성 에이전트

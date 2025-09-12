@@ -1,7 +1,7 @@
 from google.adk.agents import Agent
 from ...config import GENAI_MODEL
 from ...prompt import REPORT_EVALUATION_PROMPT
-from ...tools.report_evaluation_tool import report_evaluation_tool
+from .tools.report_evaluation_tool import report_evaluation_tool
 
 
 # 리포트 평가 에이전트
