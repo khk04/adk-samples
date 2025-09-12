@@ -7,6 +7,7 @@ from google.adk.agents.callback_context import CallbackContext
 from .sub_agents.generation.report_generation_agent import report_generation_agent
 from .sub_agents.evaluation.report_evaluation_agent import report_evaluation_agent
 from .sub_agents.evaluation.tools.condition_checker_tool import condition_checker_tool
+from .prompt import get_checker_prompt
 from .config import QUALITY_THRESHOLD, MAX_ITERATIONS
 
 
@@ -38,11 +39,7 @@ checker_agent = Agent(
     name="checker_agent",
     model="gemini-2.0-flash",
     description="리포트 품질과 반복 횟수를 확인하여 루프 종료 여부를 결정하는 에이전트",
-    instruction=(
-        f"리포트 품질 점수가 {QUALITY_THRESHOLD}점 이상이거나 "
-        f"최대 반복 횟수({MAX_ITERATIONS}회)에 도달했는지 확인하세요.\n"
-        "조건 확인 도구를 사용하여 루프 종료 여부를 결정하세요."
-    ),
+    instruction=get_checker_prompt(QUALITY_THRESHOLD, MAX_ITERATIONS),
     tools=[condition_checker_tool],
     output_key="checker_output",
 )
@@ -52,7 +49,7 @@ checker_agent = Agent(
 mvp_report_generator = LoopAgent(
     name="mvp_report_generator",
     description=(
-        "CSV 데이터를 분석하여 고품질 리포트를 생성합니다.\n"
+        "사용자의 데이터를 기반으로 고품질 리포트를 생성합니다.\n"
         "품질 기준을 만족할 때까지 리포트 생성과 평가를 반복합니다."
     ),
     sub_agents=[
