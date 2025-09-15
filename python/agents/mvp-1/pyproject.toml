@@ -1,0 +1,33 @@
+[project]
+name = "mvp-1"
+version = "0.1.0"
+description = "사용자 데이터 기반 질의 생성 에이전트 - 최적의 리포트를 만들어낼 수 있는 5단계 질의를 자동생성합니다."
+authors = [
+    {name = "MVP Developer", email = "developer@example.com"}
+]
+license = "MIT"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pandas = "^2.1.1"
+google-adk = { version = ">=0.5.0", extras = ["eval"] }
+google-genai = "^1.21.1"
+pydantic = "^2.10.6"
+python-dotenv = "^1.0.1"
+
+openpyxl = "^3.1.2"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pytest-asyncio = "^0.26.0"
+black = "^23.11.0"
+flake8 = "^6.1.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
