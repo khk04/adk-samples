@@ -26,10 +26,10 @@ def set_session(callback_context: CallbackContext):
 data_analysis_report_evaluation_agent = SequentialAgent(
     name="data_analysis_report_evaluation_agent",
     description=(
-        "CSV와 Excel 형식의 데이터를 분석하여 리포트를 생성하고 품질을 평가합니다.\n"
+        "CSV와 Excel, PDF 형식의 데이터를 분석하여 리포트를 생성하고 품질을 평가합니다.\n"
         "1. 데이터 분석 및 리포트 생성 에이전트를 호출하여 데이터 분석 및 리포트 생성\n"
         "2. 리포트 평가 에이전트를 호출하여 생성된 리포트의 품질 평가\n"
-        "지원 형식: CSV, Excel"
+        "지원 형식: CSV, Excel, PDF"
     ),
     sub_agents=[data_analysis_report_agent, report_evaluation_agent],
 )
@@ -50,8 +50,8 @@ checker_agent = Agent(
 data_report_generator = LoopAgent(
     name="data_report_generator",
     description=(
-        "CSV와 Excel 형식의 사용자 데이터를 기반으로 고품질 리포트를 생성합니다.\n"
-        "품질 기준을 만족할 때까지 데이터 분석, 리포트 생성과 평가를 반복합니다."
+        "사용자 데이터(파일)를 기반으로 고품질 리포트를 생성합니다.\n"
+        "리포트가 생성 되었으면 루프를 종료합니다."
     ),
     sub_agents=[
         data_analysis_report_evaluation_agent,  # 데이터 분석, 리포트 생성 및 평가
