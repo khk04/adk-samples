@@ -8,7 +8,7 @@ from .sub_agents.generation.report_generation_agent import data_analysis_report_
 from .sub_agents.evaluation.report_evaluation_agent import report_evaluation_agent
 from .sub_agents.evaluation.tools.condition_checker_tool import condition_checker_tool
 from .prompt import get_checker_prompt
-from .config import QUALITY_THRESHOLD, MAX_ITERATIONS
+from .config import QUALITY_THRESHOLD, MAX_ITERATIONS, GENAI_MODEL
 
 
 def set_session(callback_context: CallbackContext):
@@ -38,7 +38,7 @@ data_analysis_report_evaluation_agent = SequentialAgent(
 # 체커 에이전트 - 루프 종료 조건을 확인
 checker_agent = Agent(
     name="checker_agent",
-    model="gemini-2.0-flash",
+    model=GENAI_MODEL,
     description="리포트 품질과 반복 횟수를 확인하여 루프 종료 여부를 결정하는 에이전트",
     instruction=get_checker_prompt(QUALITY_THRESHOLD, MAX_ITERATIONS),
     tools=[condition_checker_tool],

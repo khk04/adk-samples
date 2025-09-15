@@ -2,7 +2,7 @@ from google.adk.tools import ToolContext, FunctionTool
 from ....config import QUALITY_THRESHOLD, MAX_ITERATIONS
 
 
-def check_condition_and_escalate(tool_context: ToolContext) -> dict:
+def finish_iteration(tool_context: ToolContext) -> dict:
     """
     루프 종료 조건을 확인하고 필요시 에스컬레이션합니다.
     
@@ -62,4 +62,4 @@ def check_condition_and_escalate(tool_context: ToolContext) -> dict:
 
 
 # FunctionTool로 래핑
-condition_checker_tool = FunctionTool(func=check_condition_and_escalate)
+condition_checker_tool = FunctionTool(func=finish_iteration)
