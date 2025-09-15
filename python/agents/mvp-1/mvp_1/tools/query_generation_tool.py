@@ -12,6 +12,7 @@ class QueryGenerationInput(BaseModel):
     user_responses: Dict[str, Any] = Field(default_factory=dict, description="이전 단계에서 사용자의 응답")
     data_schema: Dict[str, str] = Field(default_factory=dict, description="분석할 데이터의 스키마 (컬럼명: 타입)")
     data_summary: Dict[str, Any] = Field(default_factory=dict, description="분석할 데이터의 요약 통계")
+    user_input: Optional[str] = Field(None, description="사용자의 현재 단계 응답")
 
 
 class QueryGenerationOutput(BaseModel):
@@ -19,16 +20,23 @@ class QueryGenerationOutput(BaseModel):
     next_query: str = Field(..., description="사용자에게 던질 다음 질의")
     is_final_step: bool = Field(False, description="최종 단계 여부")
     report_guide: Optional[str] = Field(None, description="최종 리포트 생성 가이드 (최종 단계에서만 제공)")
+    current_step: int = Field(..., description="현재 처리된 단계")
+    next_step: Optional[int] = Field(None, description="다음 단계 번호 (None이면 완료)")
+    collected_responses: Dict[str, Any] = Field(default_factory=dict, description="수집된 모든 사용자 응답")
 
 
 @FunctionTool
-def generate_report_queries(current_step: int = 1, user_responses: Dict[str, Any] = {}, data_schema: Dict[str, str] = {}, data_summary: Dict[str, Any] = {}) -> QueryGenerationOutput:
+def generate_report_queries(current_step: int = 1, user_responses: Dict[str, Any] = {}, data_schema: Dict[str, str] = {}, data_summary: Dict[str, Any] = {}, user_input: Optional[str] = None) -> QueryGenerationOutput:
     """
-    사용자 데이터 기반으로 최적의 리포트를 생성하기 위한 5단계 질의를 자동 생성합니다.
-    각 단계에서 사용자에게 필요한 정보를 질의하고, 최종적으로 리포트 생성 가이드를 제공합니다.
+    사용자 데이터 기반으로 최적의 리포트를 생성하기 위한 5단계 질의를 단계별로 처리합니다.
+    각 단계에서 사용자 응답을 받아 다음 단계로 진행하거나 최종 리포트 생성 가이드를 제공합니다.
     """
-    # 매개변수 직접 사용
-
+    # 사용자 응답이 있으면 현재 단계에 저장
+    if user_input is not None:
+        step_key = _get_step_key(current_step)
+        user_responses[step_key] = user_input
+    
+    # 현재 단계에 따른 처리
     if current_step == 1:
         return _ask_report_type(user_responses, data_schema, data_summary)
     elif current_step == 2:
@@ -43,8 +51,22 @@ def generate_report_queries(current_step: int = 1, user_responses: Dict[str, Any
         return QueryGenerationOutput(
             next_query="모든 질의 단계가 완료되었습니다. 리포트 생성을 시작합니다.",
             is_final_step=True,
-            report_guide=_generate_report_guide(user_responses)
+            report_guide=_generate_report_guide(user_responses),
+            current_step=current_step,
+            collected_responses=user_responses
         )
+
+
+def _get_step_key(step: int) -> str:
+    """단계 번호에 따른 응답 키를 반환합니다."""
+    step_keys = {
+        1: "report_type",
+        2: "analysis_criteria", 
+        3: "data_scope_and_filtering",
+        4: "report_style",
+        5: "report_format"
+    }
+    return step_keys.get(step, f"step_{step}")
 
 
 def _ask_report_type(user_responses: Dict[str, Any], data_schema: Dict[str, str], data_summary: Dict[str, Any]) -> QueryGenerationOutput:
@@ -58,19 +80,29 @@ def _ask_report_type(user_responses: Dict[str, Any], data_schema: Dict[str, str]
     5. 지역별 성과 분석 (Regional Performance)
     6. 기타 (직접 입력)
     """
-    return QueryGenerationOutput(next_query=query)
+    return QueryGenerationOutput(
+        next_query=query,
+        current_step=1,
+        next_step=2,
+        collected_responses=user_responses
+    )
 
 
 def _ask_analysis_criteria(user_responses: Dict[str, Any], data_schema: Dict[str, str], data_summary: Dict[str, Any]) -> QueryGenerationOutput:
     """2단계: 분석 기준을 질의합니다."""
     report_type = user_responses.get("report_type", "알 수 없음")
-    available_columns = ", ".join(data_schema.keys())
+    available_columns = ", ".join(data_schema.keys()) if data_schema else "데이터 스키마 정보 없음"
     query = f"""
     '{report_type}' 리포트를 위해 데이터를 어떤 기준으로 분석할까요?
     예시: '제품군', '지역', '고객유형', '기간(월별, 분기별, 연간)' 등
     현재 데이터에는 다음과 같은 컬럼이 있습니다: {available_columns}
     """
-    return QueryGenerationOutput(next_query=query)
+    return QueryGenerationOutput(
+        next_query=query,
+        current_step=2,
+        next_step=3,
+        collected_responses=user_responses
+    )
 
 
 def _ask_data_scope_and_filtering(user_responses: Dict[str, Any], data_schema: Dict[str, str], data_summary: Dict[str, Any]) -> QueryGenerationOutput:
@@ -80,7 +112,12 @@ def _ask_data_scope_and_filtering(user_responses: Dict[str, Any], data_schema: D
     '{analysis_criteria}' 기준으로 분석할 데이터의 구체적인 범위와 필터링 조건을 알려주세요.
     예시: '2025년 1월부터 6월까지의 데이터', '상품군이 식품인 데이터만', '매출액 상위 10%'
     """
-    return QueryGenerationOutput(next_query=query)
+    return QueryGenerationOutput(
+        next_query=query,
+        current_step=3,
+        next_step=4,
+        collected_responses=user_responses
+    )
 
 
 def _ask_report_style(user_responses: Dict[str, Any], data_schema: Dict[str, str], data_summary: Dict[str, Any]) -> QueryGenerationOutput:
@@ -93,7 +130,12 @@ def _ask_report_style(user_responses: Dict[str, Any], data_schema: Dict[str, str
     4. 그래프 및 시각화 포함 (Include charts and visualizations)
     5. 기타 (직접 입력)
     """
-    return QueryGenerationOutput(next_query=query)
+    return QueryGenerationOutput(
+        next_query=query,
+        current_step=4,
+        next_step=5,
+        collected_responses=user_responses
+    )
 
 
 def _ask_report_format(user_responses: Dict[str, Any], data_schema: Dict[str, str], data_summary: Dict[str, Any]) -> QueryGenerationOutput:
@@ -106,7 +148,14 @@ def _ask_report_format(user_responses: Dict[str, Any], data_schema: Dict[str, st
     4. HTML
     5. 기타 (직접 입력)
     """
-    return QueryGenerationOutput(next_query=query, is_final_step=True, report_guide=_generate_report_guide(user_responses))
+    return QueryGenerationOutput(
+        next_query=query,
+        current_step=5,
+        next_step=None,
+        is_final_step=True,
+        report_guide=_generate_report_guide(user_responses),
+        collected_responses=user_responses
+    )
 
 
 def _generate_report_guide(user_responses: Dict[str, Any]) -> str:
