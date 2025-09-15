@@ -17,7 +17,7 @@ def generate_report(tool_context: ToolContext, report_content: str) -> dict:
         dict: 리포트 생성 결과
     """
     try:
-        # 리포트 디렉토리 생성
+        # 리포트 디렉토리 생성 (절대 경로 사용)
         reports_path = Path(REPORTS_DIR)
         reports_path.mkdir(parents=True, exist_ok=True)
         

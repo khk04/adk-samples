@@ -52,8 +52,8 @@ async def save_artifact_file(tool_context: ToolContext, save_path: Optional[str]
         
         # 저장 경로 결정
         if save_path is None:
-            # 기본 저장 디렉토리 생성
-            save_dir = "data"
+            # 기본 저장 디렉토리 생성 (절대 경로 사용)
+            save_dir = str(DATA_DIR)
             os.makedirs(save_dir, exist_ok=True)
             
             # 원본 파일명 그대로 사용
@@ -349,8 +349,8 @@ async def _determine_file_path(tool_context: ToolContext, file_path: Optional[st
         try:
             logger.info(f"파일 저장 시도: {filename} (크기: {len(artifact_data)} bytes)")
             
-            # 직접 파일 저장
-            save_dir = "data"
+            # 직접 파일 저장 (절대 경로 사용)
+            save_dir = str(DATA_DIR)
             os.makedirs(save_dir, exist_ok=True)
             full_save_path = os.path.join(save_dir, filename)
             

@@ -5,13 +5,13 @@ from pathlib import Path
 QUALITY_THRESHOLD = float(os.getenv("QUALITY_THRESHOLD", "8.0"))
 MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", "3"))
 GENAI_MODEL = os.getenv("GENAI_MODEL", "gemini-2.0-flash")
-REPORTS_DIR = os.getenv("REPORTS_DIR", "./data/reports")
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
 
-# 프로젝트 루트 경로
+# 프로젝트 루트 경로 - 절대 경로로 통일
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
+REPORTS_DIR = DATA_DIR / "reports"
 SAMPLE_DATA_PATH = DATA_DIR / "sample_sales_data.csv"
 
 # 리포트 품질 평가 기준 가중치
