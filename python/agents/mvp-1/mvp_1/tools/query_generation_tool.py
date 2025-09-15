@@ -22,15 +22,12 @@ class QueryGenerationOutput(BaseModel):
 
 
 @FunctionTool
-def generate_report_queries(input: QueryGenerationInput) -> QueryGenerationOutput:
+def generate_report_queries(current_step: int = 1, user_responses: Dict[str, Any] = {}, data_schema: Dict[str, str] = {}, data_summary: Dict[str, Any] = {}) -> QueryGenerationOutput:
     """
     사용자 데이터 기반으로 최적의 리포트를 생성하기 위한 5단계 질의를 자동 생성합니다.
     각 단계에서 사용자에게 필요한 정보를 질의하고, 최종적으로 리포트 생성 가이드를 제공합니다.
     """
-    current_step = input.current_step
-    user_responses = input.user_responses
-    data_schema = input.data_schema
-    data_summary = input.data_summary
+    # 매개변수 직접 사용
 
     if current_step == 1:
         return _ask_report_type(user_responses, data_schema, data_summary)

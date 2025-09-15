@@ -14,6 +14,9 @@ from google.adk.models import Gemini
 from .prompt import QUERY_GENERATION_PROMPT
 from .tools.data_analysis_tool import DataAnalysisTool
 from .tools.query_generation_tool import QueryGenerationTool
+from .tools.data_validation_tool import DataValidationTool
+from .tools.user_data_check_tool import UserDataCheckTool
+from .config import DEFAULT_MODEL_NAME, DEFAULT_TEMPERATURE, DEFAULT_MAX_OUTPUT_TOKENS
 
 
 def query_generation_agent() -> Agent:
@@ -27,15 +30,17 @@ def query_generation_agent() -> Agent:
         Agent: 구성된 질의 생성 에이전트
     """
     
-    # 모델 설정
+    # 모델 설정 (config 사용)
     model = Gemini(
-        model_name="gemini-2.5-flash",
-        temperature=0.7,
-        max_output_tokens=2048
+        model_name=DEFAULT_MODEL_NAME,
+        temperature=DEFAULT_TEMPERATURE,
+        max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS
     )
     
     # 도구 설정
     tools = [
+        UserDataCheckTool().execute,
+        DataValidationTool().execute,
         DataAnalysisTool().execute,
         QueryGenerationTool().execute
     ]

@@ -6,6 +6,7 @@ from google.adk.tools.function_tool import FunctionTool
 import pandas as pd
 import json
 import os
+from ..config import PROJECT_ROOT
 
 
 class DataAnalysisInput(BaseModel):
@@ -24,13 +25,16 @@ class DataAnalysisOutput(BaseModel):
 
 
 @FunctionTool
-def analyze_data(input: DataAnalysisInput) -> DataAnalysisOutput:
+def analyze_data(file_path: str, analysis_type: str = "basic") -> DataAnalysisOutput:
     """
     CSV 또는 Excel 파일을 분석하여 데이터의 구조와 내용을 파악합니다.
     """
     try:
-        file_path = input.file_path
-        analysis_type = input.analysis_type
+        # 매개변수 직접 사용
+        
+        # 경로 해석 개선 - 상대 경로를 절대 경로로 변환 (config 사용)
+        if not os.path.isabs(file_path):
+            file_path = str(PROJECT_ROOT / file_path)
         
         # 파일 존재 확인
         if not os.path.exists(file_path):
