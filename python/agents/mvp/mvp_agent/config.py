@@ -4,7 +4,9 @@ from pathlib import Path
 # 환경 변수에서 설정값 로드
 QUALITY_THRESHOLD = float(os.getenv("QUALITY_THRESHOLD", "8.0"))
 MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", "3"))
-GENAI_MODEL = os.getenv("GENAI_MODEL", "gemini-2.5-flash")
+DEFAULT_MODEL_NAME = "gemini-2.5-flash"
+DEFAULT_TEMPERATURE = 0.7
+DEFAULT_MAX_OUTPUT_TOKENS = 2048
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
 
@@ -29,3 +31,11 @@ REQUIRED_SECTIONS = [
     "데이터 분석",
     "결론 및 권장사항"
 ]
+
+# 모델 설정 (mvp-1 스타일)
+from google.adk.models import Gemini
+GENAI_MODEL = Gemini(
+    model=DEFAULT_MODEL_NAME,
+    temperature=DEFAULT_TEMPERATURE,
+    max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS
+)
