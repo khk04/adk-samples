@@ -107,12 +107,18 @@ def validate_data(data_directory: Optional[str] = None, required_columns: Option
                     file_info["issues"] = [f"행 수가 부족합니다 (최소 {min_rows}행 필요, 현재 {len(df)}행)"]
                     common_issues.append(f"{os.path.basename(file_path)}: 행 수 부족")
                 
-                # 필수 컬럼 검증
-                if required_columns:
+                # 동적 컬럼 검증 (필수 컬럼이 지정된 경우에만)
+                if required_columns and len(required_columns) > 0:
                     missing_columns = set(required_columns) - set(df.columns)
                     if missing_columns:
                         file_info["issues"] = file_info.get("issues", []) + [f"필수 컬럼 누락: {list(missing_columns)}"]
                         common_issues.append(f"{os.path.basename(file_path)}: 필수 컬럼 누락")
+                else:
+                    # 동적 분석: 데이터 구조 기반 품질 평가
+                    if len(df.columns) < 3:
+                        file_info["warnings"] = file_info.get("warnings", []) + ["컬럼 수가 적습니다 (최소 3개 권장)"]
+                    if len(df) < 10:
+                        file_info["warnings"] = file_info.get("warnings", []) + ["데이터 행 수가 적습니다 (최소 10행 권장)"]
                 
                 # 결측값 검증
                 high_missing_cols = [col for col, missing in df.isnull().sum().items() if missing > len(df) * 0.5]
@@ -131,15 +137,25 @@ def validate_data(data_directory: Optional[str] = None, required_columns: Option
                 })
                 common_issues.append(f"{os.path.basename(file_path)}: 파일 읽기 오류")
         
-        # 전체 데이터 품질 평가
+        # 전체 데이터 품질 평가 (동적 기준)
         is_data_ready = len(common_issues) == 0 and total_rows >= min_rows
         
-        # 권장사항 생성
+        # 동적 분석 모드: 필수 컬럼이 없으면 더 유연한 평가
+        if not required_columns or len(required_columns) == 0:
+            # 기본적인 데이터 품질만 확인
+            is_data_ready = total_rows >= min_rows and len(all_files) > 0
+        
+        # 권장사항 생성 (동적 모드)
         if not is_data_ready:
             if total_rows < min_rows:
                 recommendations.append(f"데이터 행 수를 {min_rows}행 이상으로 늘려주세요")
             if common_issues:
                 recommendations.append("파일 형식과 구조를 확인하고 수정해주세요")
+        else:
+            # 동적 분석 모드에서 성공적인 경우
+            if not required_columns or len(required_columns) == 0:
+                recommendations.append("데이터가 준비되었습니다. 다양한 분석이 가능합니다.")
+                recommendations.append("리포트 생성을 시작할 수 있습니다.")
         
         # 데이터 품질 개선 권장사항
         if len(all_files) > 1:
@@ -156,9 +172,12 @@ def validate_data(data_directory: Optional[str] = None, required_columns: Option
             if inconsistent_columns:
                 recommendations.append(f"컬럼 일관성 개선: {inconsistent_columns} 컬럼이 모든 파일에 없습니다")
         
-        # 데이터 분석 가능성 평가
-        if total_rows > 0:
-            recommendations.append("데이터가 준비되었습니다. 분석을 시작할 수 있습니다.")
+        # 데이터 분석 가능성 평가 (동적 모드)
+        if total_rows > 0 and is_data_ready:
+            if not required_columns or len(required_columns) == 0:
+                recommendations.append("데이터 구조를 분석하여 맞춤형 리포트를 생성할 수 있습니다.")
+            else:
+                recommendations.append("데이터가 준비되었습니다. 분석을 시작할 수 있습니다.")
         
         validation_summary = {
             "total_files": len(all_files),

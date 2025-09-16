@@ -8,7 +8,7 @@ VDATA_DIR = DATA_DIR / "vdata"
 REPORTS_DIR = DATA_DIR / "reports"
 
 # 기본 데이터 검증 설정
-DEFAULT_REQUIRED_COLUMNS = ["월", "지역", "상품군", "매출액", "거래건수", "고객유형", "고객만족도"]
+DEFAULT_REQUIRED_COLUMNS = []  # 동적 분석을 위해 빈 리스트로 설정
 DEFAULT_MIN_ROWS = 1
 
 # 에이전트 설정
