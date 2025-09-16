@@ -78,7 +78,12 @@ def _ask_report_type(user_responses: Dict[str, Any], data_schema: Dict[str, str]
     3. 고객별 분석 (Customer Segmentation)
     4. 상품군별 성과 분석 (Product Category Performance)
     5. 지역별 성과 분석 (Regional Performance)
-    6. 기타 (직접 입력)
+    6. 재고 현황 분석 (Inventory Analysis)
+    7. 마케팅 성과 분석 (Marketing Performance)
+    8. 고객 만족도 분석 (Customer Satisfaction)
+    9. 수익성 분석 (Profitability Analysis)
+    10. 트렌드 분석 (Trend Analysis)
+    11. 기타 (직접 입력)
     """
     return QueryGenerationOutput(
         next_query=query,
@@ -93,8 +98,19 @@ def _ask_analysis_criteria(user_responses: Dict[str, Any], data_schema: Dict[str
     report_type = user_responses.get("report_type", "알 수 없음")
     available_columns = ", ".join(data_schema.keys()) if data_schema else "데이터 스키마 정보 없음"
     query = f"""
-    '{report_type}' 리포트를 위해 데이터를 어떤 기준으로 분석할까요?
-    예시: '제품군', '지역', '고객유형', '기간(월별, 분기별, 연간)' 등
+    '{report_type}' 리포트를 위해 데이터를 어떤 기준으로 분석할까요? 다음 중 선택하거나 직접 입력해주세요:
+    1. 제품군별 (Product Category)
+    2. 지역별 (Regional)
+    3. 고객유형별 (Customer Type)
+    4. 기간별 - 월별 (Monthly)
+    5. 기간별 - 분기별 (Quarterly)
+    6. 기간별 - 연간 (Annual)
+    7. 매출액 구간별 (Sales Amount Range)
+    8. 고객만족도별 (Customer Satisfaction Level)
+    9. 거래건수별 (Transaction Count)
+    10. 채널별 (Channel - 온라인/오프라인)
+    11. 기타 (직접 입력)
+    
     현재 데이터에는 다음과 같은 컬럼이 있습니다: {available_columns}
     """
     return QueryGenerationOutput(
@@ -109,7 +125,19 @@ def _ask_data_scope_and_filtering(user_responses: Dict[str, Any], data_schema: D
     """3단계: 데이터 범위 및 필터링 조건을 질의합니다."""
     analysis_criteria = user_responses.get("analysis_criteria", "알 수 없음")
     query = f"""
-    '{analysis_criteria}' 기준으로 분석할 데이터의 구체적인 범위와 필터링 조건을 알려주세요.
+    '{analysis_criteria}' 기준으로 분석할 데이터의 구체적인 범위와 필터링 조건을 선택해주세요:
+    1. 전체 데이터 (All Data)
+    2. 최근 3개월 데이터 (Last 3 Months)
+    3. 최근 6개월 데이터 (Last 6 Months)
+    4. 최근 1년 데이터 (Last 1 Year)
+    5. 특정 기간 지정 (Custom Date Range)
+    6. 상위 10% 데이터만 (Top 10%)
+    7. 상위 20% 데이터만 (Top 20%)
+    8. 특정 조건 필터링 (Custom Filtering)
+    9. 이상치 제외 (Exclude Outliers)
+    10. 특정 값 이상/이하 (Above/Below Threshold)
+    11. 기타 (직접 입력)
+    
     예시: '2025년 1월부터 6월까지의 데이터', '상품군이 식품인 데이터만', '매출액 상위 10%'
     """
     return QueryGenerationOutput(
@@ -128,7 +156,13 @@ def _ask_report_style(user_responses: Dict[str, Any], data_schema: Dict[str, str
     2. 상세 분석 (Detailed analysis)
     3. 주요 지표 중심 (Key metrics focus)
     4. 그래프 및 시각화 포함 (Include charts and visualizations)
-    5. 기타 (직접 입력)
+    5. 대시보드 스타일 (Dashboard style)
+    6. 인사이트 중심 (Insights-focused)
+    7. 비교 분석 포함 (Comparative analysis)
+    8. 트렌드 분석 포함 (Trend analysis)
+    9. 예측 분석 포함 (Predictive analysis)
+    10. 실행 계획 포함 (Action plan included)
+    11. 기타 (직접 입력)
     """
     return QueryGenerationOutput(
         next_query=query,
@@ -142,11 +176,17 @@ def _ask_report_format(user_responses: Dict[str, Any], data_schema: Dict[str, st
     """5단계: 리포트 파일 형식을 질의합니다."""
     query = """
     최종 리포트를 어떤 파일 형식으로 받으시겠습니까? 다음 중 선택하거나 직접 입력해주세요:
-    1. PDF
-    2. Excel
-    3. Markdown
-    4. HTML
-    5. 기타 (직접 입력)
+    1. PDF (인쇄용, 공식 문서)
+    2. Excel (데이터 분석용, 편집 가능)
+    3. Markdown (개발자용, 텍스트 기반)
+    4. HTML (웹 브라우저용, 인터랙티브)
+    5. PowerPoint (프레젠테이션용)
+    6. Word (문서 편집용)
+    7. CSV (데이터만 추출)
+    8. JSON (구조화된 데이터)
+    9. 대시보드 (웹 대시보드)
+    10. 이메일 전송 (Email delivery)
+    11. 기타 (직접 입력)
     """
     return QueryGenerationOutput(
         next_query=query,

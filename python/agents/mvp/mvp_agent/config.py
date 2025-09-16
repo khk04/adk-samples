@@ -4,7 +4,7 @@ from pathlib import Path
 # 환경 변수에서 설정값 로드
 QUALITY_THRESHOLD = float(os.getenv("QUALITY_THRESHOLD", "8.0"))
 MAX_ITERATIONS = int(os.getenv("MAX_ITERATIONS", "3"))
-GENAI_MODEL = os.getenv("GENAI_MODEL", "gemini-1.5-flash")
+GENAI_MODEL = os.getenv("GENAI_MODEL", "gemini-2.5-flash")
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8000"))
 
