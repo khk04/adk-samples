@@ -12,135 +12,410 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Data analysis sub-agent for analyzing user data."""
+"""Data analysis sub-agent for analyzing user data with artifact support."""
 
-from google.adk import Agent
-from google.adk.tools.function_tool import FunctionTool
-from typing import Dict, Any, List
-from pydantic import BaseModel, Field
 import pandas as pd
+import shutil
+import io
+import logging
 import os
-from ...config import VDATA_DIR
+from pathlib import Path
+from typing import Optional, Dict, Any, Union, List, Tuple
+from google.adk import Agent
+from google.adk.tools import ToolContext, FunctionTool
+from ...config import VDATA_DIR, SAMPLE_DATA_PATH, DATA_DIR
+import pdfplumber
+from pypdf import PdfReader
 from . import prompt
 
-
-class DataAnalysisInput(BaseModel):
-    """데이터 분석 입력"""
-    file_path: str = Field(..., description="분석할 데이터 파일 경로")
-    analysis_type: str = Field(default="comprehensive", description="분석 유형")
+# 로깅 설정
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-class DataAnalysisOutput(BaseModel):
-    """데이터 분석 출력"""
-    success: bool = Field(..., description="분석 성공 여부")
-    data_summary: Dict[str, Any] = Field(default_factory=dict, description="데이터 요약 정보")
-    business_insights: List[str] = Field(default_factory=list, description="비즈니스 인사이트")
-    analysis_recommendations: List[str] = Field(default_factory=list, description="분석 권장사항")
-    data_quality_issues: List[str] = Field(default_factory=list, description="데이터 품질 이슈")
-    error_message: str = Field(default="", description="오류 메시지")
+def detect_data_format(file_path: str) -> str:
+    """파일 확장자를 기반으로 데이터 형식을 감지합니다."""
+    file_path = Path(file_path)
+    extension = file_path.suffix.lower()
+    
+    if extension == '.csv':
+        return 'csv'
+    elif extension in ['.xlsx', '.xls']:
+        return 'excel'
+    elif extension == '.pdf':
+        return 'pdf'
+    else:
+        return 'unknown'
 
 
-@FunctionTool
-def analyze_user_data(file_path: str, analysis_type: str = "comprehensive") -> DataAnalysisOutput:
-    """
-    사용자 데이터를 분석하여 비즈니스 인사이트와 리포트 생성 권장사항을 제공합니다.
-    """
+def parse_data_file(file_path: str, data_format: str) -> pd.DataFrame:
+    """파일을 읽어서 pandas DataFrame으로 변환합니다."""
     try:
-        # 경로 처리
-        if not os.path.isabs(file_path):
-            file_path = str(VDATA_DIR / file_path)
-        
-        if not os.path.exists(file_path):
-            return DataAnalysisOutput(
-                success=False,
-                error_message=f"파일을 찾을 수 없습니다: {file_path}"
-            )
-        
-        # 데이터 로드
-        if file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
-        elif file_path.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(file_path)
+        if data_format == 'csv':
+            return pd.read_csv(file_path, encoding='utf-8')
+        elif data_format == 'excel':
+            return pd.read_excel(file_path)
+        elif data_format == 'pdf':
+            return _parse_pdf_file(file_path)
         else:
-            return DataAnalysisOutput(
-                success=False,
-                error_message="지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 사용해주세요."
-            )
-        
-        # 기본 분석
-        data_summary = {
+            raise ValueError(f"지원하지 않는 데이터 형식: {data_format}")
+    except Exception as e:
+        logger.error(f"데이터 파일 파싱 실패: {e}")
+        raise
+
+
+def _parse_pdf_file(file_path: str) -> pd.DataFrame:
+    """PDF 파일에서 텍스트를 추출하여 DataFrame으로 변환합니다."""
+    try:
+        with pdfplumber.open(file_path) as pdf:
+            pages_data = []
+            
+            for page_num, page in enumerate(pdf.pages, 1):
+                text = page.extract_text()
+                if text:
+                    pages_data.append({
+                        'page': page_num,
+                        'text': text,
+                        'text_length': len(text)
+                    })
+            
+            if not pages_data:
+                return pd.DataFrame(columns=['page', 'text', 'text_length'])
+            
+            return pd.DataFrame(pages_data)
+            
+    except Exception as e:
+        logger.error(f"PDF 파일 파싱 실패: {e}")
+        raise
+
+
+def analyze_dataframe(df: pd.DataFrame, file_type: str = None) -> Dict[str, Any]:
+    """DataFrame을 분석하여 통계 정보를 반환합니다."""
+    try:
+        # 기본 통계
+        basic_stats = {
             "total_rows": len(df),
             "total_columns": len(df.columns),
-            "column_names": df.columns.tolist(),
-            "data_types": df.dtypes.astype(str).to_dict(),
-            "missing_values": df.isnull().sum().to_dict(),
-            "memory_usage": df.memory_usage(deep=True).sum()
+            "memory_usage": df.memory_usage(deep=True).sum(),
+            "dtypes": df.dtypes.astype(str).to_dict()
         }
         
-        # 비즈니스 인사이트 도출
-        business_insights = []
-        analysis_recommendations = []
-        data_quality_issues = []
+        # 누락 데이터 분석
+        missing_data = df.isnull().sum().to_dict()
         
-        # 수치형 데이터 분석
-        numeric_cols = df.select_dtypes(include=['number']).columns
-        if len(numeric_cols) > 0:
-            for col in numeric_cols:
-                col_lower = col.lower()
-                if any(keyword in col_lower for keyword in ['sales', 'revenue', 'amount', 'price']):
-                    business_insights.append(f"매출 관련 데이터: {col} (평균: {df[col].mean():.2f})")
-                    analysis_recommendations.append(f"{col} 기준 매출 분석 및 트렌드 파악")
-                elif any(keyword in col_lower for keyword in ['quantity', 'count', 'volume']):
-                    business_insights.append(f"수량 관련 데이터: {col} (총합: {df[col].sum():.0f})")
-                    analysis_recommendations.append(f"{col} 기준 수량 분석 및 패턴 파악")
+        # 상관관계 분석 (수치형 컬럼만)
+        numeric_columns = df.select_dtypes(include=['number']).columns
+        correlation_analysis = {}
+        if len(numeric_columns) > 1:
+            correlation_matrix = df[numeric_columns].corr()
+            correlation_analysis = correlation_matrix.to_dict()
         
-        # 범주형 데이터 분석
-        categorical_cols = df.select_dtypes(include=['object', 'category']).columns
-        if len(categorical_cols) > 0:
-            for col in categorical_cols:
-                col_lower = col.lower()
-                unique_count = df[col].nunique()
-                if any(keyword in col_lower for keyword in ['product', 'category', 'item']):
-                    business_insights.append(f"제품 관련 데이터: {col} ({unique_count}개 카테고리)")
-                    analysis_recommendations.append(f"{col} 기준 제품별 성과 분석")
-                elif any(keyword in col_lower for keyword in ['region', 'area', 'location']):
-                    business_insights.append(f"지역 관련 데이터: {col} ({unique_count}개 지역)")
-                    analysis_recommendations.append(f"{col} 기준 지역별 분석")
-                elif any(keyword in col_lower for keyword in ['customer', 'client', 'user']):
-                    business_insights.append(f"고객 관련 데이터: {col} ({unique_count}명 고객)")
-                    analysis_recommendations.append(f"{col} 기준 고객 세분화 분석")
+        # PDF 특별 분석
+        pdf_analysis = {}
+        if file_type == 'pdf':
+            pdf_analysis = _analyze_pdf_data(df)
         
-        # 데이터 품질 이슈 확인
-        missing_data = df.isnull().sum()
-        high_missing = missing_data[missing_data > 0]
-        if len(high_missing) > 0:
-            for col, count in high_missing.items():
-                percentage = (count / len(df)) * 100
-                data_quality_issues.append(f"{col}: {count}개 결측값 ({percentage:.1f}%)")
+        # 결과 반환
+        result = {
+            "basic_stats": _convert_pandas_to_json_safe(basic_stats),
+            "missing_data": _convert_pandas_to_json_safe(missing_data),
+            "correlation_analysis": _convert_pandas_to_json_safe(correlation_analysis),
+            "pdf_analysis": pdf_analysis
+        }
         
-        # 이상치 검출 (수치형 데이터)
-        for col in numeric_cols:
-            Q1 = df[col].quantile(0.25)
-            Q3 = df[col].quantile(0.75)
-            IQR = Q3 - Q1
-            outliers = df[(df[col] < Q1 - 1.5 * IQR) | (df[col] > Q3 + 1.5 * IQR)]
-            if len(outliers) > 0:
-                data_quality_issues.append(f"{col}: {len(outliers)}개 이상치 발견")
-        
-        return DataAnalysisOutput(
-            success=True,
-            data_summary=data_summary,
-            business_insights=business_insights,
-            analysis_recommendations=analysis_recommendations,
-            data_quality_issues=data_quality_issues
-        )
+        return result
         
     except Exception as e:
-        return DataAnalysisOutput(
-            success=False,
-            error_message=f"데이터 분석 중 오류가 발생했습니다: {str(e)}"
-        )
+        logger.error(f"DataFrame 분석 실패: {e}")
+        raise
 
+
+def _analyze_pdf_data(df: pd.DataFrame) -> Dict[str, Any]:
+    """PDF 데이터를 분석합니다."""
+    try:
+        if 'text' not in df.columns:
+            return {"error": "PDF 텍스트 데이터가 없습니다."}
+        
+        # 전체 텍스트 통계
+        total_text = ' '.join(df['text'].fillna(''))
+        total_chars = len(total_text)
+        total_words = len(total_text.split())
+        
+        # 페이지별 통계
+        page_stats = []
+        for _, row in df.iterrows():
+            page_text = str(row.get('text', ''))
+            page_stats.append({
+                'page': int(row.get('page', 0)),
+                'characters': len(page_text),
+                'words': len(page_text.split())
+            })
+        
+        # 키워드 빈도 (간단한 분석)
+        words = total_text.lower().split()
+        word_freq = {}
+        for word in words:
+            if len(word) > 3:  # 3글자 이상만
+                word_freq[word] = word_freq.get(word, 0) + 1
+        
+        # 상위 10개 키워드
+        top_keywords = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:10]
+        
+        return {
+            "total_pages": len(df),
+            "total_characters": total_chars,
+            "total_words": total_words,
+            "page_stats": page_stats,
+            "top_keywords": top_keywords
+        }
+        
+    except Exception as e:
+        logger.error(f"PDF 데이터 분석 실패: {e}")
+        return {"error": f"PDF 분석 실패: {str(e)}"}
+
+
+def _convert_pandas_to_json_safe(data: Any) -> Any:
+    """pandas 객체를 JSON 직렬화 가능한 형태로 변환"""
+    if isinstance(data, dict):
+        return {str(k): _convert_pandas_to_json_safe(v) for k, v in data.items()}
+    elif isinstance(data, (list, tuple)):
+        return [_convert_pandas_to_json_safe(item) for item in data]
+    elif hasattr(data, 'item'):  # numpy scalar
+        return data.item()
+    elif hasattr(data, 'tolist'):  # numpy array
+        return data.tolist()
+    else:
+        return str(data) if data is not None else None
+
+
+async def analyze_data(tool_context: ToolContext, file_path: Optional[str] = None) -> str:
+    """
+    데이터 파일을 분석하여 통계 정보를 반환합니다.
+    
+    Args:
+        tool_context: ADK 프레임워크에서 제공하는 컨텍스트 객체
+        file_path: 분석할 파일 경로 (선택사항)
+    
+    Returns:
+        str: 분석 결과 JSON 문자열
+    """
+    try:
+        logger.info("=== 데이터 분석 시작 ===")
+        
+        # 파일 경로 결정
+        final_file_path, file_info = await _determine_file_path(tool_context, file_path)
+        logger.info(f"분석할 파일: {final_file_path}")
+        
+        # 데이터 형식 감지
+        data_format = detect_data_format(final_file_path)
+        logger.info(f"감지된 데이터 형식: {data_format}")
+        
+        if data_format == 'unknown':
+            return f"지원하지 않는 데이터 형식입니다: {final_file_path}"
+        
+        # 데이터 파싱
+        df = parse_data_file(final_file_path, data_format)
+        logger.info(f"데이터 로드 완료: {len(df)}행, {len(df.columns)}열")
+        
+        # 데이터 분석
+        analysis_result = analyze_dataframe(df, data_format)
+        
+        # 파일 정보 추가
+        analysis_result["file_info"] = file_info
+        
+        logger.info("=== 데이터 분석 완료 ===")
+        return str(analysis_result)
+        
+    except Exception as e:
+        error_msg = f"데이터 분석 중 오류 발생: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
+
+
+async def _get_vdata_file() -> Tuple[str, Dict[str, Any]]:
+    """vdata 폴더에서 첫 번째 데이터 파일을 반환"""
+    try:
+        vdata_path = Path(VDATA_DIR)
+        if not vdata_path.exists():
+            logger.warning(f"vdata 폴더가 존재하지 않습니다: {vdata_path}")
+            return str(SAMPLE_DATA_PATH), {
+                "filename": "sample_sales_data.csv",
+                "file_path": str(SAMPLE_DATA_PATH),
+                "file_type": "csv",
+                "source": "sample_data_fallback"
+            }
+        
+        # 지원하는 파일 확장자
+        supported_extensions = ['.csv', '.xlsx', '.xls', '.pdf']
+        
+        # vdata 폴더에서 지원하는 파일 찾기
+        for file_path in vdata_path.iterdir():
+            if file_path.is_file() and file_path.suffix.lower() in supported_extensions:
+                logger.info(f"vdata 폴더에서 발견된 파일: {file_path}")
+                return str(file_path), {
+                    "filename": file_path.name,
+                    "file_path": str(file_path),
+                    "file_type": file_path.suffix.lower().lstrip('.'),
+                    "source": "vdata_folder"
+                }
+        
+        # vdata 폴더에 파일이 없으면 샘플 데이터 사용
+        logger.info("vdata 폴더에 지원하는 파일이 없습니다. 샘플 데이터를 사용합니다.")
+        return str(SAMPLE_DATA_PATH), {
+            "filename": "sample_sales_data.csv",
+            "file_path": str(SAMPLE_DATA_PATH),
+            "file_type": "csv",
+            "source": "sample_data_fallback"
+        }
+        
+    except Exception as e:
+        logger.error(f"vdata 폴더 처리 중 오류: {e}")
+        return str(SAMPLE_DATA_PATH), {
+            "filename": "sample_sales_data.csv",
+            "file_path": str(SAMPLE_DATA_PATH),
+            "file_type": "csv",
+            "source": "sample_data_error"
+        }
+
+
+async def _determine_file_path(tool_context: ToolContext, file_path: Optional[str]) -> Tuple[str, Dict[str, Any]]:
+    """파일 경로를 결정하고 파일 정보를 반환"""
+    
+    if file_path is not None:
+        # 명시적으로 지정된 파일 경로 사용
+        return file_path, {
+            "filename": Path(file_path).name,
+            "file_path": file_path,
+            "source": "explicit"
+        }
+    
+    # 무한 루프 방지: 이미 Artifact 처리를 시도했는지 확인
+    if "artifact_processing_attempted" in tool_context.state:
+        logger.info("이미 Artifact 처리를 시도했습니다. vdata 폴더의 데이터를 사용합니다.")
+        file_path, file_info = await _get_vdata_file()
+        return file_path, file_info
+    
+    # Artifact 파일 처리
+    logger.info("=== Artifact 파일 처리 시작 ===")
+    tool_context.state["artifact_processing_attempted"] = True
+    
+    try:
+        # 1. Artifact 목록 조회
+        artifact_ids = await tool_context.list_artifacts()
+        logger.info(f"발견된 Artifact ID 개수: {len(artifact_ids)}")
+        
+        if not artifact_ids:
+            logger.info("업로드된 문서가 없습니다.")
+            raise Exception("업로드된 문서가 없습니다.")
+        
+        # 첫 번째 Artifact 사용
+        artifact_id = artifact_ids[0]
+        logger.info(f"처리할 Artifact ID: {artifact_id}")
+        
+        # 2. Artifact 내용 로드
+        try:
+            artifact_data = await tool_context.load_artifact(artifact_id)
+            logger.info(f"Artifact 로드 성공: {len(artifact_data)} bytes")
+        except Exception as e:
+            logger.error(f"Artifact 로드 실패: {e}")
+            raise Exception(f"Artifact 로드 실패: {e}")
+        
+        # 3. 파일명 추출 (Artifact ID 기반)
+        filename = f"artifact_{artifact_id}.pdf"
+        logger.info(f"추출된 파일명: {filename}")
+        
+        # 4. PDF 유효성 검사
+        try:
+            # pypdf로 PDF 유효성 검사
+            pdf_reader = PdfReader(io.BytesIO(artifact_data))
+            page_count = len(pdf_reader.pages)
+            logger.info(f"PDF 유효성 검사 성공: {page_count}페이지")
+            
+            # pdfplumber로 추가 검증
+            with pdfplumber.open(io.BytesIO(artifact_data)) as pdf:
+                total_pages = len(pdf.pages)
+                logger.info(f"pdfplumber 검증 성공: {total_pages}페이지")
+                
+        except Exception as e:
+            logger.error(f"PDF 유효성 검사 실패: {e}")
+            raise Exception(f"PDF 유효성 검사 실패: {e}")
+        
+        # 5. 파일 저장
+        try:
+            logger.info(f"파일 저장 시도: {filename} (크기: {len(artifact_data)} bytes)")
+            
+            # 직접 파일 저장 (절대 경로 사용)
+            save_dir = str(DATA_DIR)
+            os.makedirs(save_dir, exist_ok=True)
+            full_save_path = os.path.join(save_dir, filename)
+            
+            with open(full_save_path, 'wb') as f:
+                f.write(artifact_data)
+            
+            logger.info(f"파일이 성공적으로 저장되었습니다: {full_save_path}")
+            
+            # 저장된 파일이 실제로 존재하는지 확인
+            if not Path(full_save_path).exists():
+                logger.error(f"저장된 파일이 존재하지 않음: {full_save_path}")
+                raise Exception(f"저장된 파일이 존재하지 않음: {full_save_path}")
+            
+            logger.info(f"=== Artifact 파일 저장 성공 ===")
+            return full_save_path, {
+                "filename": filename,
+                "file_type": "pdf",
+                "mime_type": "application/pdf",
+                "artifact_id": artifact_id,
+                "saved_path": full_save_path,
+                "source": "artifact",
+                "page_count": page_count
+            }
+            
+        except Exception as e:
+            logger.error(f"Artifact 파일 저장 실패: {e}")
+            import traceback
+            logger.error(f"상세 에러: {traceback.format_exc()}")
+            raise Exception(f"Artifact 파일 저장 실패: {e}")
+            
+    except Exception as e:
+        logger.error(f"Artifact 처리 로직에서 예외 발생: {e}")
+        import traceback
+        logger.error(f"상세 에러: {traceback.format_exc()}")
+    
+    # vdata 폴더 데이터 사용
+    logger.info("vdata 폴더 데이터 사용")
+    file_path, file_info = await _get_vdata_file()
+    return file_path, file_info
+
+
+async def get_artifact_files(tool_context: ToolContext) -> List[Dict[str, Any]]:
+    """Artifact 파일 목록 가져오기"""
+    try:
+        artifact_ids = await tool_context.list_artifacts()
+        files = []
+        
+        for artifact_id in artifact_ids:
+            try:
+                artifact_data = await tool_context.load_artifact(artifact_id)
+                file_info = {
+                    "artifact_id": artifact_id,
+                    "filename": artifact_data.inline_data.display_name,
+                    "mime_type": artifact_data.inline_data.mime_type,
+                    "size": len(artifact_data.inline_data.data)
+                }
+                files.append(file_info)
+            except Exception as e:
+                logger.error(f"Artifact {artifact_id} 처리 실패: {e}")
+                continue
+        
+        return files
+    except Exception as e:
+        logger.error(f"Artifact 파일 목록 조회 실패: {e}")
+        return []
+
+
+# FunctionTool로 래핑
+data_analysis_tool = FunctionTool(func=analyze_data)
+artifact_files_tool = FunctionTool(func=get_artifact_files)
 
 MODEL = "gemini-2.0-flash"
 
@@ -148,6 +423,6 @@ data_analysis_agent = Agent(
     model=MODEL,
     name="data_analysis_agent",
     instruction=prompt.DATA_ANALYSIS_PROMPT,
-    tools=[analyze_user_data],
+    tools=[data_analysis_tool, artifact_files_tool],
     output_key="analysis_results"
 )

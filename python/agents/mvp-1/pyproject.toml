@@ -1,7 +1,7 @@
 [project]
 name = "mvp-1"
 version = "0.1.0"
-description = "사용자 데이터 기반 질의 생성 에이전트 - 최적의 리포트를 만들어낼 수 있는 5단계 질의를 자동생성합니다."
+description = "멀티 에이전트 기반 데이터 분석 및 리포트 생성 시스템 - 고품질 리포트를 자동 생성하고 품질을 평가합니다."
 authors = [
     {name = "MVP Developer", email = "developer@example.com"}
 ]
@@ -16,8 +16,12 @@ google-adk = { version = ">=0.5.0", extras = ["eval"] }
 google-genai = "^1.21.1"
 pydantic = "^2.10.6"
 python-dotenv = "^1.0.1"
-
+fastapi = "^0.115.0"
+uvicorn = "^0.34.0"
 openpyxl = "^3.1.2"
+pdfplumber = "^0.10.3"
+pypdf = "^3.17.4"
+anyio = "^4.0.0"
 
 [tool.poetry.group.dev]
 optional = true
