@@ -7,11 +7,56 @@ import pandas as pd
 import json
 import os
 from ..config import PROJECT_ROOT
+from typing import Optional
+
+
+def _find_data_file_for_analysis() -> Optional[str]:
+    """vdata 폴더에서 분석할 데이터 파일을 자동으로 찾습니다."""
+    try:
+        # vdata 폴더 경로들 확인 (우선순위 순)
+        possible_paths = [
+            # 절대 경로
+            "/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/vdata",
+            # 현재 디렉토리 기준 상대 경로
+            "data/vdata",
+            "./data/vdata",
+            # 상위 디렉토리 기준
+            "../data/vdata",
+            "../../data/vdata",
+            # 기타 가능한 경로
+            "vdata",
+            "./vdata"
+        ]
+        
+        for base_path in possible_paths:
+            abs_path = os.path.abspath(base_path)
+            
+            if os.path.exists(abs_path):
+                try:
+                    files = os.listdir(abs_path)
+                    
+                    # CSV 파일 우선 검색
+                    for file in files:
+                        if file.endswith('.csv'):
+                            return os.path.join(abs_path, file)
+                    
+                    # Excel 파일 검색
+                    for file in files:
+                        if file.endswith(('.xlsx', '.xls')):
+                            return os.path.join(abs_path, file)
+                            
+                except Exception:
+                    continue
+        
+        return None
+        
+    except Exception:
+        return None
 
 
 class DataAnalysisInput(BaseModel):
     """데이터 분석 입력"""
-    file_path: str = Field(..., description="분석할 데이터 파일 경로")
+    file_path: str = Field(default="", description="분석할 데이터 파일 경로 (비어있으면 자동 탐지)")
     analysis_type: str = Field(default="basic", description="분석 유형 (basic, detailed, schema_only)")
 
 
@@ -25,12 +70,23 @@ class DataAnalysisOutput(BaseModel):
 
 
 @FunctionTool
-def analyze_data(file_path: str, analysis_type: str = "basic") -> DataAnalysisOutput:
+def analyze_data(file_path: str = "", analysis_type: str = "basic") -> DataAnalysisOutput:
     """
     CSV 또는 Excel 파일을 분석하여 데이터의 구조와 내용을 파악합니다.
+    file_path가 제공되지 않으면 vdata 폴더에서 자동으로 찾습니다.
     """
     try:
-        # 매개변수 직접 사용
+        # 파일 경로 자동 탐지
+        if not file_path:
+            print("📂 데이터 파일 자동 탐지 시작...")
+            file_path = _find_data_file_for_analysis()
+            if not file_path:
+                return DataAnalysisOutput(
+                    success=False,
+                    error_message="분석할 데이터 파일을 찾을 수 없습니다. vdata 폴더에 CSV 또는 Excel 파일이 있는지 확인해주세요."
+                )
+            else:
+                print(f"✅ 데이터 파일 발견: {file_path}")
         
         # 경로 해석 개선 - 상대 경로를 절대 경로로 변환 (config 사용)
         if not os.path.isabs(file_path):

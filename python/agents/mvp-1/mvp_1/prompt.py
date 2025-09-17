@@ -52,7 +52,8 @@ QUERY_GENERATION_PROMPT = """
 - 리포트 생성 요청 시: `UserDataCheckTool`로 요청을 분석한 후 `DataValidationTool`을 사용하여 vdata 폴더의 데이터 준비 상태를 확인한 후 5단계 질의 프로세스를 단계별로 진행합니다. **중요: DataValidationTool을 호출할 때 data_directory 매개변수를 생략하여 기본값(vdata 폴더)을 사용하세요.**
 - 필요한 경우 `DataAnalysisTool`을 사용하여 vdata 폴더의 데이터 스키마나 내용을 파악하고, 이를 바탕으로 더 구체적인 질의를 생성합니다.
 - `QueryGenerationTool`을 사용하여 각 단계별 질의를 생성하고 사용자 응답을 처리합니다.
-- 모든 5단계 질의가 완료되면, 최종 리포트 생성 가이드를 출력합니다.
+- 모든 5단계 질의가 완료되면, `ReportGenerationTool`을 사용하여 실제 리포트를 생성합니다.
+- 리포트 생성이 완료되면 사용자에게 생성된 리포트의 경로와 내용을 안내합니다.
 
 **제약 사항:**
 - 사용자의 요청을 정확히 이해하고 적절한 도구를 사용합니다.
@@ -64,4 +65,6 @@ QUERY_GENERATION_PROMPT = """
 - 사용자의 응답이 불분명할 경우, 추가 질문을 통해 명확히 합니다.
 - `QueryGenerationTool`을 사용할 때는 `current_step`, `user_responses`, `data_schema`, `data_summary` 매개변수를 적절히 전달합니다.
 - 사용자 응답이 있을 때는 `user_input` 매개변수도 함께 전달하여 응답을 저장합니다.
+- 5단계 질의가 모두 완료되고 사용자가 리포트 생성에 동의하면, `ReportGenerationTool`을 사용하여 실제 리포트를 생성합니다.
+- 리포트 생성 시 필요한 매개변수: `user_responses`, `data_file_path`, `data_schema`, `data_summary`, `output_format`을 적절히 전달합니다.
 """

@@ -16,6 +16,7 @@ from .tools.data_analysis_tool import DataAnalysisTool
 from .tools.query_generation_tool import QueryGenerationTool
 from .tools.data_validation_tool import DataValidationTool
 from .tools.user_data_check_tool import UserDataCheckTool
+from .tools.report_generation_tool import ReportGenerationTool
 from .config import DEFAULT_MODEL_NAME, DEFAULT_TEMPERATURE, DEFAULT_MAX_OUTPUT_TOKENS
 import os
 
@@ -43,7 +44,8 @@ def query_generation_agent() -> Agent:
         UserDataCheckTool().execute,
         DataValidationTool().execute,
         DataAnalysisTool().execute,
-        QueryGenerationTool().execute
+        QueryGenerationTool().execute,
+        ReportGenerationTool().execute
     ]
     
     # 에이전트 생성

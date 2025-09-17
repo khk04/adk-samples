@@ -50,7 +50,7 @@ def generate_report_queries(current_step: int = 1, user_responses: Dict[str, Any
         return _ask_report_format(user_responses, data_schema, data_summary)
     else:
         return QueryGenerationOutput(
-            next_query="모든 질의 단계가 완료되었습니다. 리포트 생성을 시작합니다.",
+            next_query="모든 질의 단계가 완료되었습니다. 수집된 정보를 바탕으로 리포트를 생성할 준비가 되었습니다. 리포트 생성을 진행하시겠습니까? (예/아니요)",
             is_final_step=True,
             report_guide=_generate_report_guide(user_responses),
             current_step=current_step,
