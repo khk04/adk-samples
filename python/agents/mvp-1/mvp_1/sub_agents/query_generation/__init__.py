@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""MVP-1: Multi-agent system for user data analysis and report generation."""
+"""Query generation sub-agent for creating dynamic queries based on data analysis."""
 
-from . import agent
+from .agent import query_generation_agent

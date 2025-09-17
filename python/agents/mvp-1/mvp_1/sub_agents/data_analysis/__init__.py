@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""MVP-1: Multi-agent system for user data analysis and report generation."""
+"""Data analysis sub-agent for analyzing user data and providing insights."""
 
-from . import agent
+from .agent import data_analysis_agent

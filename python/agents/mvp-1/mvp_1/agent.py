@@ -1,62 +1,45 @@
-"""
-MVP-1: 사용자 데이터 기반 질의 생성 에이전트
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-사용자 데이터를 분석하여 최적의 리포트를 생성하기 위한 5단계 질의를 자동 생성하는 에이전트입니다.
+"""MVP-1: Multi-agent system for user data analysis and report generation."""
 
-주요 구성요소:
-- Gemini 모델 (gemini-2.5-flash)
-- DataAnalysisTool: CSV/Excel 파일 분석
-- QueryGenerationTool: 5단계 질의 생성
-"""
+from google.adk.agents import LlmAgent
+from google.adk.tools.agent_tool import AgentTool
 
-from google.adk.agents import Agent
-from google.adk.models import Gemini
-from .prompt import QUERY_GENERATION_PROMPT
-from .tools.data_analysis_tool import DataAnalysisTool
-from .tools.query_generation_tool import QueryGenerationTool
-from .tools.data_validation_tool import DataValidationTool
-from .tools.user_data_check_tool import UserDataCheckTool
-from .config import DEFAULT_MODEL_NAME, DEFAULT_TEMPERATURE, DEFAULT_MAX_OUTPUT_TOKENS
-import os
+from . import prompt
+from .sub_agents.data_analysis import data_analysis_agent
+from .sub_agents.query_generation import query_generation_agent
+from .sub_agents.report_generation import report_generation_agent
 
-
-def query_generation_agent() -> Agent:
-    """
-    사용자 데이터 기반 질의 생성 에이전트를 생성합니다.
-    
-    이 에이전트는 사용자 데이터를 분석하여 최적의 리포트를 생성하기 위한
-    5단계 질의를 자동으로 생성하고 진행합니다.
-    
-    Returns:
-        Agent: 구성된 질의 생성 에이전트
-    """
-    
-    # 모델 설정
-    model = Gemini(
-        model=DEFAULT_MODEL_NAME,
-        temperature=DEFAULT_TEMPERATURE,
-        max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS
-    )
-    
-    # 도구 설정
-    tools = [
-        UserDataCheckTool().execute,
-        DataValidationTool().execute,
-        DataAnalysisTool().execute,
-        QueryGenerationTool().execute
-    ]
-    
-    # 에이전트 생성
-    agent = Agent(
-        model=model,
-        tools=tools,
-        instruction=QUERY_GENERATION_PROMPT,
-        name="query_generation_agent",
-        description="사용자 데이터를 분석하여 최적의 리포트 생성을 위한 5단계 질의를 자동 생성하는 에이전트"
-    )
-    
-    return agent
+MODEL = "gemini-2.0-flash"
 
 
-# 루트 에이전트
-root_agent = query_generation_agent()
+mvp_coordinator = LlmAgent(
+    name="mvp_coordinator",
+    model=MODEL,
+    description=(
+        "사용자 데이터를 분석하여 최적의 비즈니스 리포트를 생성하는 멀티 에이전트 시스템. "
+        "데이터 분석, 질의 생성, 리포트 생성을 담당하는 전문 서브 에이전트들을 조율하여 "
+        "사용자 맞춤형 리포트를 제공합니다."
+    ),
+    instruction=prompt.MVP_COORDINATOR_PROMPT,
+    output_key="final_report",
+    tools=[
+        AgentTool(agent=data_analysis_agent),
+        AgentTool(agent=query_generation_agent),
+        AgentTool(agent=report_generation_agent),
+    ],
+)
+
+root_agent = mvp_coordinator
