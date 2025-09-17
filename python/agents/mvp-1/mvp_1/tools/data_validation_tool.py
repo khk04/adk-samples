@@ -198,13 +198,10 @@ def validate_data(data_directory: Optional[str] = None, required_columns: Option
         )
         
     except Exception as e:
-        # 디버깅을 위한 상세 오류 정보
-        error_details = f"데이터 검증 중 오류가 발생했습니다: {str(e)}"
-        
         return DataValidationOutput(
             success=False,
             is_data_ready=False,
-            error_message=error_details
+            error_message=f"데이터 검증 중 오류가 발생했습니다: {str(e)}"
         )
 
 

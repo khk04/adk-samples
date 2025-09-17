@@ -92,12 +92,9 @@ def check_user_data_request(user_request: str = "데이터 확인해줘", data_d
         )
         
     except Exception as e:
-        # 디버깅을 위한 상세 오류 정보
-        error_details = f"요청을 처리하는 중 오류가 발생했습니다: {str(e)}"
-        
         return UserDataCheckOutput(
             success=False,
-            message=error_details,
+            message=f"요청을 처리하는 중 오류가 발생했습니다: {str(e)}",
             should_validate=False,
             validation_params={}
         )
