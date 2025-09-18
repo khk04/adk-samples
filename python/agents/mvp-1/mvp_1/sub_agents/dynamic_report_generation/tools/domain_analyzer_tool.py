@@ -10,48 +10,46 @@ import re
 
 def _convert_numpy_types(obj):
     """NumPy 타입을 Python 기본 타입으로 변환합니다."""
-    try:
-        # NumPy 정수 타입들
-        if isinstance(obj, (np.integer, np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64)):
-            return int(obj)
-        # NumPy 실수 타입들
-        elif isinstance(obj, (np.floating, np.float16, np.float32, np.float64)):
-            return float(obj)
-        # NumPy 불린 타입
-        elif isinstance(obj, np.bool_):
-            return bool(obj)
-        # NumPy 배열
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        # 딕셔너리
-        elif isinstance(obj, dict):
-            return {key: _convert_numpy_types(value) for key, value in obj.items()}
-        # 리스트
-        elif isinstance(obj, list):
-            return [_convert_numpy_types(item) for item in obj]
-        # 튜플
-        elif isinstance(obj, tuple):
-            return tuple(_convert_numpy_types(item) for item in obj)
-        # Pandas Series
-        elif isinstance(obj, pd.Series):
-            return obj.tolist()
-        # Pandas DataFrame
-        elif isinstance(obj, pd.DataFrame):
-            return obj.to_dict()
-        # Pandas NaN
-        elif pd.isna(obj):
-            return None
-        # NumPy NaN
-        elif isinstance(obj, (np.nan, type(np.nan))):
-            return None
-        # 기타 NumPy 타입들
-        elif hasattr(obj, 'item'):  # NumPy 스칼라 타입들
-            return obj.item()
-        else:
-            return obj
-    except (ValueError, TypeError, OverflowError):
-        # 변환 실패 시 문자열로 변환
-        return str(obj)
+    import numpy as np
+    import pandas as pd
+    
+    def _deep_convert(item):
+        try:
+            # NumPy 타입 체크 (더 포괄적으로)
+            if hasattr(item, 'dtype') and hasattr(item, 'item'):
+                # NumPy 스칼라 타입
+                return item.item()
+            elif isinstance(item, (np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64)):
+                return int(item)
+            elif isinstance(item, (np.float16, np.float32, np.float64)):
+                return float(item)
+            elif isinstance(item, np.bool_):
+                return bool(item)
+            elif isinstance(item, np.ndarray):
+                return item.tolist()
+            elif isinstance(item, pd.Series):
+                return item.tolist()
+            elif isinstance(item, pd.DataFrame):
+                return item.to_dict()
+            elif pd.isna(item):
+                return None
+            elif isinstance(item, dict):
+                return {k: _deep_convert(v) for k, v in item.items()}
+            elif isinstance(item, (list, tuple)):
+                return type(item)(_deep_convert(i) for i in item)
+            elif hasattr(item, '__iter__') and not isinstance(item, (str, bytes)):
+                # 다른 iterable 타입들도 처리
+                return [_deep_convert(i) for i in item]
+            else:
+                return item
+        except (ValueError, TypeError, OverflowError, AttributeError):
+            # 모든 변환 실패 시 문자열로 변환
+            try:
+                return str(item)
+            except:
+                return None
+    
+    return _deep_convert(obj)
 
 
 class DomainAnalysisInput(BaseModel):
@@ -109,12 +107,17 @@ def analyze_data_domain(
         # 핵심 지표 식별
         key_metrics = _identify_key_metrics(df, domain_result['domain'])
         
+        # 모든 결과를 numpy 타입에서 변환
+        converted_characteristics = _convert_numpy_types(characteristics)
+        converted_strategy = _convert_numpy_types(strategy)
+        converted_metrics = _convert_numpy_types(key_metrics)
+        
         return DomainAnalysisOutput(
             domain_type=domain_result['domain'],
             domain_confidence=float(domain_result['confidence']),
-            data_characteristics=_convert_numpy_types(characteristics),
-            analysis_strategy=_convert_numpy_types(strategy),
-            key_metrics=_convert_numpy_types(key_metrics),
+            data_characteristics=converted_characteristics,
+            analysis_strategy=converted_strategy,
+            key_metrics=converted_metrics,
             success=True,
             message=f"도메인 분석 완료: {domain_result['domain']} (신뢰도: {domain_result['confidence']:.2f})"
         )

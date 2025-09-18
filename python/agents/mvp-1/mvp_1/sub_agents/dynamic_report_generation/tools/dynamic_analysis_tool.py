@@ -11,48 +11,46 @@ import json
 
 def _convert_numpy_types(obj):
     """NumPy 타입을 Python 기본 타입으로 변환합니다."""
-    try:
-        # NumPy 정수 타입들
-        if isinstance(obj, (np.integer, np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64)):
-            return int(obj)
-        # NumPy 실수 타입들
-        elif isinstance(obj, (np.floating, np.float16, np.float32, np.float64)):
-            return float(obj)
-        # NumPy 불린 타입
-        elif isinstance(obj, np.bool_):
-            return bool(obj)
-        # NumPy 배열
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        # 딕셔너리
-        elif isinstance(obj, dict):
-            return {key: _convert_numpy_types(value) for key, value in obj.items()}
-        # 리스트
-        elif isinstance(obj, list):
-            return [_convert_numpy_types(item) for item in obj]
-        # 튜플
-        elif isinstance(obj, tuple):
-            return tuple(_convert_numpy_types(item) for item in obj)
-        # Pandas Series
-        elif isinstance(obj, pd.Series):
-            return obj.tolist()
-        # Pandas DataFrame
-        elif isinstance(obj, pd.DataFrame):
-            return obj.to_dict()
-        # Pandas NaN
-        elif pd.isna(obj):
-            return None
-        # NumPy NaN
-        elif isinstance(obj, (np.nan, type(np.nan))):
-            return None
-        # 기타 NumPy 타입들
-        elif hasattr(obj, 'item'):  # NumPy 스칼라 타입들
-            return obj.item()
-        else:
-            return obj
-    except (ValueError, TypeError, OverflowError):
-        # 변환 실패 시 문자열로 변환
-        return str(obj)
+    import numpy as np
+    import pandas as pd
+    
+    def _deep_convert(item):
+        try:
+            # NumPy 타입 체크 (더 포괄적으로)
+            if hasattr(item, 'dtype') and hasattr(item, 'item'):
+                # NumPy 스칼라 타입
+                return item.item()
+            elif isinstance(item, (np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64)):
+                return int(item)
+            elif isinstance(item, (np.float16, np.float32, np.float64)):
+                return float(item)
+            elif isinstance(item, np.bool_):
+                return bool(item)
+            elif isinstance(item, np.ndarray):
+                return item.tolist()
+            elif isinstance(item, pd.Series):
+                return item.tolist()
+            elif isinstance(item, pd.DataFrame):
+                return item.to_dict()
+            elif pd.isna(item):
+                return None
+            elif isinstance(item, dict):
+                return {k: _deep_convert(v) for k, v in item.items()}
+            elif isinstance(item, (list, tuple)):
+                return type(item)(_deep_convert(i) for i in item)
+            elif hasattr(item, '__iter__') and not isinstance(item, (str, bytes)):
+                # 다른 iterable 타입들도 처리
+                return [_deep_convert(i) for i in item]
+            else:
+                return item
+        except (ValueError, TypeError, OverflowError, AttributeError):
+            # 모든 변환 실패 시 문자열로 변환
+            try:
+                return str(item)
+            except:
+                return None
+    
+    return _deep_convert(obj)
 
 
 class DynamicAnalysisInput(BaseModel):
@@ -158,12 +156,19 @@ def perform_dynamic_analysis(
             additional_analysis = _perform_criteria_based_analysis(df, analysis_criteria, user_responses)
             analysis_results.update(additional_analysis)
         
+        # 모든 결과를 numpy 타입에서 변환
+        converted_results = _convert_numpy_types(analysis_results)
+        converted_findings = _convert_numpy_types(key_findings)
+        converted_trends = _convert_numpy_types(trends)
+        converted_patterns = _convert_numpy_types(patterns)
+        converted_metrics = _convert_numpy_types(performance_metrics)
+        
         return DynamicAnalysisOutput(
-            analysis_results=_convert_numpy_types(analysis_results),
-            key_findings=_convert_numpy_types(key_findings),
-            trends=_convert_numpy_types(trends),
-            patterns=_convert_numpy_types(patterns),
-            performance_metrics=_convert_numpy_types(performance_metrics),
+            analysis_results=converted_results,
+            key_findings=converted_findings,
+            trends=converted_trends,
+            patterns=converted_patterns,
+            performance_metrics=converted_metrics,
             success=True,
             message=f"동적 분석 완료: {domain_type} 도메인 분석 수행"
         )
@@ -203,8 +208,8 @@ def _analyze_sales_domain(df: pd.DataFrame, user_responses: Dict[str, Any]) -> D
     sales_cols = _find_sales_columns(df)
     if sales_cols:
         results['sales_analysis'] = {
-            'total_sales': df[sales_cols].sum().sum() if len(sales_cols) > 0 else 0,
-            'average_sales': df[sales_cols].mean().mean() if len(sales_cols) > 0 else 0,
+            'total_sales': float(df[sales_cols].sum().sum()) if len(sales_cols) > 0 else 0,
+            'average_sales': float(df[sales_cols].mean().mean()) if len(sales_cols) > 0 else 0,
             'sales_growth': _calculate_sales_growth(df, sales_cols),
             'top_performers': _find_top_sales_performers(df, sales_cols)
         }
@@ -271,7 +276,7 @@ def _calculate_sales_growth(df: pd.DataFrame, sales_cols: List[str]) -> Dict[str
             
             if first_half > 0:
                 growth_rate = ((second_half - first_half) / first_half) * 100
-                growth_rates[col] = growth_rate
+                growth_rates[col] = float(growth_rate)
     
     return growth_rates
 
@@ -285,8 +290,8 @@ def _find_top_sales_performers(df: pd.DataFrame, sales_cols: List[str]) -> Dict[
         top_values = df.nlargest(top_10_percent, col)
         top_performers[col] = {
             'top_values': top_values[col].tolist(),
-            'average_top': top_values[col].mean(),
-            'percentage_of_total': (top_values[col].sum() / df[col].sum()) * 100
+            'average_top': float(top_values[col].mean()),
+            'percentage_of_total': float((top_values[col].sum() / df[col].sum()) * 100)
         }
     
     return top_performers
@@ -299,7 +304,8 @@ def _analyze_product_performance(df: pd.DataFrame, product_cols: List[str], sale
     for product_col in product_cols:
         if product_col in df.columns:
             product_summary = df.groupby(product_col)[sales_cols].agg(['sum', 'mean', 'count']).round(2)
-            product_analysis[product_col] = product_summary.to_dict()
+            # NumPy 타입을 Python 기본 타입으로 변환
+            product_analysis[product_col] = _convert_numpy_types(product_summary.to_dict())
     
     return product_analysis
 
@@ -311,7 +317,8 @@ def _analyze_regional_performance(df: pd.DataFrame, region_cols: List[str], sale
     for region_col in region_cols:
         if region_col in df.columns:
             regional_summary = df.groupby(region_col)[sales_cols].agg(['sum', 'mean', 'count']).round(2)
-            regional_analysis[region_col] = regional_summary.to_dict()
+            # NumPy 타입을 Python 기본 타입으로 변환
+            regional_analysis[region_col] = _convert_numpy_types(regional_summary.to_dict())
     
     return regional_analysis
 
@@ -365,7 +372,7 @@ def _identify_sales_patterns(df: pd.DataFrame) -> Dict[str, Any]:
             date_col = date_cols[0]
             df['month'] = df[date_col].dt.month
             monthly_patterns = df.groupby('month')[sales_cols].mean()
-            patterns['seasonal_patterns'] = monthly_patterns.to_dict()
+            patterns['seasonal_patterns'] = _convert_numpy_types(monthly_patterns.to_dict())
     
     return patterns
 
@@ -378,12 +385,12 @@ def _calculate_sales_metrics(df: pd.DataFrame) -> Dict[str, Any]:
     if sales_cols:
         for col in sales_cols:
             metrics[f'{col}_metrics'] = {
-                'total': df[col].sum(),
-                'average': df[col].mean(),
-                'median': df[col].median(),
-                'std': df[col].std(),
-                'min': df[col].min(),
-                'max': df[col].max()
+                'total': float(df[col].sum()),
+                'average': float(df[col].mean()),
+                'median': float(df[col].median()),
+                'std': float(df[col].std()),
+                'min': float(df[col].min()),
+                'max': float(df[col].max())
             }
     
     return metrics
@@ -441,16 +448,16 @@ def _perform_customer_segmentation(df: pd.DataFrame, customer_cols: List[str]) -
                 # 범주형 데이터의 경우
                 value_counts = df[col].value_counts()
                 segmentation[col] = {
-                    'segments': value_counts.to_dict(),
-                    'diversity_index': len(value_counts) / len(df)
+                    'segments': _convert_numpy_types(value_counts.to_dict()),
+                    'diversity_index': float(len(value_counts) / len(df))
                 }
             else:
                 # 수치형 데이터의 경우 (간단한 분위수 기반 세분화)
                 df[f'{col}_segment'] = pd.qcut(df[col], q=4, labels=['Low', 'Medium', 'High', 'Very High'])
                 segment_counts = df[f'{col}_segment'].value_counts()
                 segmentation[col] = {
-                    'segments': segment_counts.to_dict(),
-                    'quartiles': df[col].quantile([0.25, 0.5, 0.75]).to_dict()
+                    'segments': _convert_numpy_types(segment_counts.to_dict()),
+                    'quartiles': _convert_numpy_types(df[col].quantile([0.25, 0.5, 0.75]).to_dict())
                 }
     
     return segmentation
@@ -464,9 +471,9 @@ def _analyze_customer_behavior(df: pd.DataFrame, behavior_cols: List[str]) -> Di
         if col in df.columns:
             if df[col].dtype in ['int64', 'float64']:
                 behavior_analysis[col] = {
-                    'average': df[col].mean(),
-                    'median': df[col].median(),
-                    'frequency_distribution': df[col].value_counts().head(10).to_dict()
+                    'average': float(df[col].mean()),
+                    'median': float(df[col].median()),
+                    'frequency_distribution': _convert_numpy_types(df[col].value_counts().head(10).to_dict())
                 }
     
     return behavior_analysis
@@ -620,7 +627,7 @@ def _identify_general_patterns(df: pd.DataFrame) -> Dict[str, Any]:
                     col1, col2 = corr_matrix.columns[i], corr_matrix.columns[j]
                     strong_correlations.append({
                         'columns': [col1, col2],
-                        'correlation': corr_val
+                        'correlation': float(corr_val)
                     })
         
         if strong_correlations:
@@ -637,12 +644,12 @@ def _calculate_general_metrics(df: pd.DataFrame) -> Dict[str, Any]:
     if len(numeric_cols) > 0:
         for col in numeric_cols:
             metrics[f'{col}_metrics'] = {
-                'total': df[col].sum(),
-                'average': df[col].mean(),
-                'median': df[col].median(),
-                'std': df[col].std(),
-                'min': df[col].min(),
-                'max': df[col].max()
+                'total': float(df[col].sum()),
+                'average': float(df[col].mean()),
+                'median': float(df[col].median()),
+                'std': float(df[col].std()),
+                'min': float(df[col].min()),
+                'max': float(df[col].max())
             }
     
     return metrics
@@ -659,8 +666,8 @@ def _perform_criteria_based_analysis(df: pd.DataFrame, analysis_criteria: str, u
             additional_analysis['performance_analysis'] = {}
             for col in numeric_cols:
                 additional_analysis['performance_analysis'][col] = {
-                    'total_performance': df[col].sum(),
-                    'average_performance': df[col].mean(),
+                    'total_performance': float(df[col].sum()),
+                    'average_performance': float(df[col].mean()),
                     'top_performers': df.nlargest(5, col)[col].tolist()
                 }
     
@@ -671,7 +678,7 @@ def _perform_criteria_based_analysis(df: pd.DataFrame, analysis_criteria: str, u
             numeric_cols = df.select_dtypes(include=[np.number]).columns
             if len(numeric_cols) > 0:
                 trend_analysis = df.groupby(df[date_col].dt.to_period('M'))[numeric_cols].mean()
-                additional_analysis['trend_analysis'] = trend_analysis.to_dict()
+                additional_analysis['trend_analysis'] = _convert_numpy_types(trend_analysis.to_dict())
     
     return additional_analysis
 

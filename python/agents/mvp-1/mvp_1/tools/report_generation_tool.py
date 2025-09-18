@@ -13,6 +13,50 @@ import numpy as np
 from ..config import VDATA_DIR
 
 
+def _convert_numpy_types(obj):
+    """NumPy 타입을 Python 기본 타입으로 변환합니다."""
+    import numpy as np
+    import pandas as pd
+    
+    def _deep_convert(item):
+        try:
+            # NumPy 타입 체크 (더 포괄적으로)
+            if hasattr(item, 'dtype') and hasattr(item, 'item'):
+                # NumPy 스칼라 타입
+                return item.item()
+            elif isinstance(item, (np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64)):
+                return int(item)
+            elif isinstance(item, (np.float16, np.float32, np.float64)):
+                return float(item)
+            elif isinstance(item, np.bool_):
+                return bool(item)
+            elif isinstance(item, np.ndarray):
+                return item.tolist()
+            elif isinstance(item, pd.Series):
+                return item.tolist()
+            elif isinstance(item, pd.DataFrame):
+                return item.to_dict()
+            elif pd.isna(item):
+                return None
+            elif isinstance(item, dict):
+                return {k: _deep_convert(v) for k, v in item.items()}
+            elif isinstance(item, (list, tuple)):
+                return type(item)(_deep_convert(i) for i in item)
+            elif hasattr(item, '__iter__') and not isinstance(item, (str, bytes)):
+                # 다른 iterable 타입들도 처리
+                return [_deep_convert(i) for i in item]
+            else:
+                return item
+        except (ValueError, TypeError, OverflowError, AttributeError):
+            # 모든 변환 실패 시 문자열로 변환
+            try:
+                return str(item)
+            except:
+                return None
+    
+    return _deep_convert(obj)
+
+
 class ReportGenerationInput(BaseModel):
     """리포트 생성 입력"""
     user_responses: Dict[str, Any] = Field(..., description="5단계 질의에서 수집된 사용자 응답")
@@ -93,8 +137,8 @@ def generate_comprehensive_report(
                 "total_rows": len(df),
                 "total_columns": len(df.columns),
                 "column_names": df.columns.tolist(),
-                "data_types": df.dtypes.astype(str).to_dict(),
-                "missing_values": df.isnull().sum().to_dict()
+                "data_types": _convert_numpy_types(df.dtypes.astype(str).to_dict()),
+                "missing_values": _convert_numpy_types(df.isnull().sum().to_dict())
             }
         
         # 리포트 내용 생성
@@ -111,7 +155,7 @@ def generate_comprehensive_report(
         return ReportGenerationOutput(
             report_content=report_content,
             report_file_path=report_file_path,
-            charts_generated=charts_generated,
+            charts_generated=_convert_numpy_types(charts_generated),
             success=True,
             message=f"리포트가 성공적으로 생성되었습니다. 파일 위치: {report_file_path}"
         )
@@ -231,7 +275,7 @@ def _generate_report_content(
     
     for col in df.columns:
         dtype = str(df[col].dtype)
-        missing_count = df[col].isnull().sum()
+        missing_count = _convert_numpy_types(df[col].isnull().sum())
         missing_pct = (missing_count / len(df)) * 100
         description = _get_column_description(col)
         report += f"| {col} | {dtype} | {missing_count}개 ({missing_pct:.1f}%) | {description} |\n"
@@ -246,11 +290,11 @@ def _generate_report_content(
         for col in numeric_cols:
             stats = df[col].describe()
             report += f"**{col}:**\n"
-            report += f"- 평균: {stats['mean']:.2f}\n"
-            report += f"- 중앙값: {stats['50%']:.2f}\n"
-            report += f"- 최솟값: {stats['min']:.2f}\n"
-            report += f"- 최댓값: {stats['max']:.2f}\n"
-            report += f"- 표준편차: {stats['std']:.2f}\n\n"
+            report += f"- 평균: {_convert_numpy_types(stats['mean']):.2f}\n"
+            report += f"- 중앙값: {_convert_numpy_types(stats['50%']):.2f}\n"
+            report += f"- 최솟값: {_convert_numpy_types(stats['min']):.2f}\n"
+            report += f"- 최댓값: {_convert_numpy_types(stats['max']):.2f}\n"
+            report += f"- 표준편차: {_convert_numpy_types(stats['std']):.2f}\n\n"
     
     # 범주형 컬럼 분석
     categorical_cols = df.select_dtypes(include=['object', 'category']).columns
@@ -260,10 +304,11 @@ def _generate_report_content(
             if col not in df.columns:
                 continue
             value_counts = df[col].value_counts().head(10)
-            total_unique = df[col].nunique()
+            total_unique = _convert_numpy_types(df[col].nunique())
             
             report += f"**{col}:** (총 {total_unique}개 고유값)\n"
             for idx, (value, count) in enumerate(value_counts.items()):
+                count = _convert_numpy_types(count)
                 pct = (count / len(df)) * 100
                 report += f"{idx+1}. {value}: {count}개 ({pct:.1f}%)\n"
             report += "\n"
@@ -350,8 +395,8 @@ def _generate_custom_analysis(df: pd.DataFrame, analysis_criteria: str, user_res
         if len(numeric_cols) > 0:
             analysis += "**성과 지표 분석:**\n"
             for col in numeric_cols[:3]:  # 상위 3개 수치 컬럼
-                total = df[col].sum()
-                avg = df[col].mean()
+                total = _convert_numpy_types(df[col].sum())
+                avg = _convert_numpy_types(df[col].mean())
                 analysis += f"- {col}: 총합 {total:.2f}, 평균 {avg:.2f}\n"
     
     if "트렌드" in analysis_criteria:
@@ -371,7 +416,7 @@ def _generate_insights(df: pd.DataFrame, user_responses: Dict[str, Any]) -> List
     insights.append(f"총 {len(df):,}건의 데이터를 분석했습니다.")
     
     # 결측값 인사이트
-    missing_ratio = (df.isnull().sum().sum() / (len(df) * len(df.columns))) * 100
+    missing_ratio = (_convert_numpy_types(df.isnull().sum().sum()) / (len(df) * len(df.columns))) * 100
     if missing_ratio > 10:
         insights.append(f"전체 데이터의 {missing_ratio:.1f}%가 결측값으로, 데이터 품질 개선이 필요합니다.")
     elif missing_ratio < 1:
@@ -382,7 +427,9 @@ def _generate_insights(df: pd.DataFrame, user_responses: Dict[str, Any]) -> List
     if len(numeric_cols) > 0:
         high_var_cols = []
         for col in numeric_cols:
-            if df[col].std() / df[col].mean() > 1:  # 변동계수가 1 이상
+            std_val = _convert_numpy_types(df[col].std())
+            mean_val = _convert_numpy_types(df[col].mean())
+            if std_val / mean_val > 1:  # 변동계수가 1 이상
                 high_var_cols.append(col)
         
         if high_var_cols:
@@ -392,7 +439,7 @@ def _generate_insights(df: pd.DataFrame, user_responses: Dict[str, Any]) -> List
     categorical_cols = df.select_dtypes(include=['object', 'category']).columns
     if len(categorical_cols) > 0:
         for col in categorical_cols[:2]:  # 상위 2개만
-            unique_ratio = df[col].nunique() / len(df)
+            unique_ratio = _convert_numpy_types(df[col].nunique()) / len(df)
             if unique_ratio > 0.8:
                 insights.append(f"{col} 항목은 매우 다양한 값들을 가지고 있습니다.")
             elif unique_ratio < 0.1:
