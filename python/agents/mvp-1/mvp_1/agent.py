@@ -17,6 +17,7 @@ from .tools.query_generation_tool import QueryGenerationTool
 from .tools.data_validation_tool import DataValidationTool
 from .tools.user_data_check_tool import UserDataCheckTool
 from .tools.report_generation_tool import ReportGenerationTool
+from .sub_agents.agent import report_evaluation_agent
 from .config import DEFAULT_MODEL_NAME, DEFAULT_TEMPERATURE, DEFAULT_MAX_OUTPUT_TOKENS
 import os
 
@@ -48,10 +49,16 @@ def query_generation_agent() -> Agent:
         ReportGenerationTool().execute
     ]
     
+    # 서브 에이전트 설정
+    sub_agents = [
+        report_evaluation_agent()
+    ]
+    
     # 에이전트 생성
     agent = Agent(
         model=model,
         tools=tools,
+        sub_agents=sub_agents,
         instruction=QUERY_GENERATION_PROMPT,
         name="query_generation_agent",
         description="사용자 데이터를 분석하여 최적의 리포트 생성을 위한 5단계 질의를 자동 생성하는 에이전트"
