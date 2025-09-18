@@ -3,6 +3,54 @@
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 from google.adk.tools.function_tool import FunctionTool
+import numpy as np
+import pandas as pd
+
+
+def _convert_numpy_types(obj):
+    """NumPy 타입을 Python 기본 타입으로 변환합니다."""
+    try:
+        # NumPy 정수 타입들
+        if isinstance(obj, (np.integer, np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64)):
+            return int(obj)
+        # NumPy 실수 타입들
+        elif isinstance(obj, (np.floating, np.float16, np.float32, np.float64)):
+            return float(obj)
+        # NumPy 불린 타입
+        elif isinstance(obj, np.bool_):
+            return bool(obj)
+        # NumPy 배열
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        # 딕셔너리
+        elif isinstance(obj, dict):
+            return {key: _convert_numpy_types(value) for key, value in obj.items()}
+        # 리스트
+        elif isinstance(obj, list):
+            return [_convert_numpy_types(item) for item in obj]
+        # 튜플
+        elif isinstance(obj, tuple):
+            return tuple(_convert_numpy_types(item) for item in obj)
+        # Pandas Series
+        elif isinstance(obj, pd.Series):
+            return obj.tolist()
+        # Pandas DataFrame
+        elif isinstance(obj, pd.DataFrame):
+            return obj.to_dict()
+        # Pandas NaN
+        elif pd.isna(obj):
+            return None
+        # NumPy NaN
+        elif isinstance(obj, (np.nan, type(np.nan))):
+            return None
+        # 기타 NumPy 타입들
+        elif hasattr(obj, 'item'):  # NumPy 스칼라 타입들
+            return obj.item()
+        else:
+            return obj
+    except (ValueError, TypeError, OverflowError):
+        # 변환 실패 시 문자열로 변환
+        return str(obj)
 
 
 class InsightGenerationInput(BaseModel):
@@ -43,10 +91,10 @@ def generate_business_insights(
         opportunity_insights = _generate_opportunity_insights(domain_type, analysis_results, trends)
         
         return InsightGenerationOutput(
-            business_insights=business_insights,
-            actionable_insights=actionable_insights,
-            risk_insights=risk_insights,
-            opportunity_insights=opportunity_insights,
+            business_insights=_convert_numpy_types(business_insights),
+            actionable_insights=_convert_numpy_types(actionable_insights),
+            risk_insights=_convert_numpy_types(risk_insights),
+            opportunity_insights=_convert_numpy_types(opportunity_insights),
             success=True,
             message=f"인사이트 생성 완료: {domain_type} 도메인 인사이트 {len(business_insights)}개 생성"
         )
