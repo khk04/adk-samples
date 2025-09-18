@@ -1,13 +1,16 @@
 """리포트 생성 도구"""
 
+
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 from google.adk.tools.function_tool import FunctionTool
 import pandas as pd
 import json
 import os
+import glob
 from datetime import datetime
 import numpy as np
+from ..config import VDATA_DIR
 
 
 class ReportGenerationInput(BaseModel):
@@ -123,65 +126,44 @@ def generate_comprehensive_report(
 
 
 def _find_data_file() -> Optional[str]:
-    """vdata 폴더에서 분석할 데이터 파일을 자동으로 찾습니다."""
+    """vdata 폴더(VDATA_DIR)에서 분석할 데이터 파일을 자동으로 찾습니다."""
     try:
-        # 현재 작업 디렉토리 확인
-        current_dir = os.getcwd()
-        print(f"현재 작업 디렉토리: {current_dir}")
-        
-        # vdata 폴더 경로들 확인 (우선순위 순)
+        # 1. config에서 정의한 VDATA_DIR 우선 사용
+        vdata_path = str(VDATA_DIR)
+        print(f"vdata 기준 경로: {vdata_path}")
+        if os.path.exists(vdata_path):
+            # glob으로 지원 파일 탐색
+            csv_files = glob.glob(os.path.join(vdata_path, "*.csv"))
+            excel_files = glob.glob(os.path.join(vdata_path, "*.xlsx")) + glob.glob(os.path.join(vdata_path, "*.xls"))
+            all_files = csv_files + excel_files
+            if all_files:
+                print(f"✅ 데이터 파일 발견: {all_files[0]}")
+                return all_files[0]
+            else:
+                print(f"❌ vdata 폴더에 지원되는 파일이 없습니다: {vdata_path}")
+        else:
+            print(f"❌ VDATA_DIR 경로가 존재하지 않습니다: {vdata_path}")
+
+        # 2. fallback: 기존 방식의 경로 리스트도 보조적으로 시도
         possible_paths = [
-            # 절대 경로
-            "/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/vdata",
-            # 현재 디렉토리 기준 상대 경로
             "data/vdata",
             "./data/vdata",
-            # 상위 디렉토리 기준
             "../data/vdata",
             "../../data/vdata",
-            # mvp_1 폴더 내에서 실행되는 경우
-            "../data/vdata",
-            "data/vdata",
-            # 기타 가능한 경로
             "vdata",
             "./vdata"
         ]
-        
         for base_path in possible_paths:
             abs_path = os.path.abspath(base_path)
-            print(f"경로 확인 중: {base_path} -> {abs_path}")
-            
             if os.path.exists(abs_path):
-                print(f"✅ 경로 발견: {abs_path}")
-                
-                # 디렉토리 내 파일 목록 확인
-                try:
-                    files = os.listdir(abs_path)
-                    print(f"파일 목록: {files}")
-                    
-                    # CSV 파일 우선 검색
-                    for file in files:
-                        if file.endswith('.csv'):
-                            full_path = os.path.join(abs_path, file)
-                            print(f"✅ CSV 파일 발견: {full_path}")
-                            return full_path
-                    
-                    # Excel 파일 검색
-                    for file in files:
-                        if file.endswith(('.xlsx', '.xls')):
-                            full_path = os.path.join(abs_path, file)
-                            print(f"✅ Excel 파일 발견: {full_path}")
-                            return full_path
-                            
-                except Exception as e:
-                    print(f"❌ 디렉토리 읽기 실패 ({abs_path}): {e}")
-                    continue
-            else:
-                print(f"❌ 경로 없음: {abs_path}")
-        
+                csv_files = glob.glob(os.path.join(abs_path, "*.csv"))
+                excel_files = glob.glob(os.path.join(abs_path, "*.xlsx")) + glob.glob(os.path.join(abs_path, "*.xls"))
+                all_files = csv_files + excel_files
+                if all_files:
+                    print(f"✅ 데이터 파일 발견: {all_files[0]}")
+                    return all_files[0]
         print("❌ 데이터 파일을 찾을 수 없습니다.")
         return None
-        
     except Exception as e:
         print(f"❌ _find_data_file 실행 중 오류: {e}")
         return None
