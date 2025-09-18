@@ -42,8 +42,13 @@ class ReportEvaluationOutput(BaseModel):
 def evaluate_report_quality(
     report_content: str,
     report_file_path: str = "",
-    evaluation_criteria: Dict[str, float] = None,
-    required_sections: List[str] = None
+    evaluation_criteria: Dict[str, float] = {
+        "completeness": 0.30,
+        "clarity": 0.25,
+        "accuracy": 0.25,
+        "structure": 0.20
+    },
+    required_sections: List[str] = ["요약", "주요 발견사항", "데이터 분석", "결론 및 권장사항"]
 ) -> ReportEvaluationOutput:
     """
     생성된 리포트의 품질을 평가합니다.
@@ -58,18 +63,6 @@ def evaluate_report_quality(
         ReportEvaluationOutput: 평가 결과
     """
     try:
-        # 기본값 설정
-        if evaluation_criteria is None:
-            evaluation_criteria = {
-                "completeness": 0.30,
-                "clarity": 0.25,
-                "accuracy": 0.25,
-                "structure": 0.20
-            }
-        
-        if required_sections is None:
-            required_sections = ["요약", "주요 발견사항", "데이터 분석", "결론 및 권장사항"]
-        
         # 리포트 파일에서 내용 읽기 (파일 경로가 제공된 경우)
         if report_file_path and os.path.exists(report_file_path):
             try:
