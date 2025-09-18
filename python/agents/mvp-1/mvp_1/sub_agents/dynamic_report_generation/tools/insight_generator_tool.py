@@ -35,6 +35,7 @@ def _convert_numpy_types(obj):
             elif isinstance(item, dict):
                 return {k: _deep_convert(v) for k, v in item.items()}
             elif isinstance(item, (list, tuple)):
+                # 리스트와 튜플은 원래 타입을 유지
                 return type(item)(_deep_convert(i) for i in item)
             elif hasattr(item, '__iter__') and not isinstance(item, (str, bytes)):
                 # 다른 iterable 타입들도 처리
@@ -42,11 +43,8 @@ def _convert_numpy_types(obj):
             else:
                 return item
         except (ValueError, TypeError, OverflowError, AttributeError):
-            # 모든 변환 실패 시 문자열로 변환
-            try:
-                return str(item)
-            except:
-                return None
+            # 변환 실패 시 원본 반환 (문자열로 변환하지 않음)
+            return item
     
     return _deep_convert(obj)
 
@@ -88,11 +86,28 @@ def generate_business_insights(
         risk_insights = _generate_risk_insights(domain_type, analysis_results, patterns)
         opportunity_insights = _generate_opportunity_insights(domain_type, analysis_results, trends)
         
+        # 모든 리스트 타입을 보장
+        converted_business = _convert_numpy_types(business_insights)
+        if not isinstance(converted_business, list):
+            converted_business = [str(converted_business)] if converted_business else []
+        
+        converted_actionable = _convert_numpy_types(actionable_insights)
+        if not isinstance(converted_actionable, list):
+            converted_actionable = [str(converted_actionable)] if converted_actionable else []
+        
+        converted_risk = _convert_numpy_types(risk_insights)
+        if not isinstance(converted_risk, list):
+            converted_risk = [str(converted_risk)] if converted_risk else []
+        
+        converted_opportunity = _convert_numpy_types(opportunity_insights)
+        if not isinstance(converted_opportunity, list):
+            converted_opportunity = [str(converted_opportunity)] if converted_opportunity else []
+        
         return InsightGenerationOutput(
-            business_insights=_convert_numpy_types(business_insights),
-            actionable_insights=_convert_numpy_types(actionable_insights),
-            risk_insights=_convert_numpy_types(risk_insights),
-            opportunity_insights=_convert_numpy_types(opportunity_insights),
+            business_insights=converted_business,
+            actionable_insights=converted_actionable,
+            risk_insights=converted_risk,
+            opportunity_insights=converted_opportunity,
             success=True,
             message=f"인사이트 생성 완료: {domain_type} 도메인 인사이트 {len(business_insights)}개 생성"
         )

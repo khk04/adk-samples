@@ -37,6 +37,7 @@ def _convert_numpy_types(obj):
             elif isinstance(item, dict):
                 return {k: _deep_convert(v) for k, v in item.items()}
             elif isinstance(item, (list, tuple)):
+                # 리스트와 튜플은 원래 타입을 유지
                 return type(item)(_deep_convert(i) for i in item)
             elif hasattr(item, '__iter__') and not isinstance(item, (str, bytes)):
                 # 다른 iterable 타입들도 처리
@@ -44,11 +45,8 @@ def _convert_numpy_types(obj):
             else:
                 return item
         except (ValueError, TypeError, OverflowError, AttributeError):
-            # 모든 변환 실패 시 문자열로 변환
-            try:
-                return str(item)
-            except:
-                return None
+            # 변환 실패 시 원본 반환 (문자열로 변환하지 않음)
+            return item
     
     return _deep_convert(obj)
 
@@ -158,7 +156,10 @@ def perform_dynamic_analysis(
         
         # 모든 결과를 numpy 타입에서 변환
         converted_results = _convert_numpy_types(analysis_results)
+        # key_findings는 반드시 리스트로 유지
         converted_findings = _convert_numpy_types(key_findings)
+        if not isinstance(converted_findings, list):
+            converted_findings = [str(converted_findings)] if converted_findings else []
         converted_trends = _convert_numpy_types(trends)
         converted_patterns = _convert_numpy_types(patterns)
         converted_metrics = _convert_numpy_types(performance_metrics)

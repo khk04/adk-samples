@@ -35,6 +35,7 @@ def _convert_numpy_types(obj):
             elif isinstance(item, dict):
                 return {k: _deep_convert(v) for k, v in item.items()}
             elif isinstance(item, (list, tuple)):
+                # 리스트와 튜플은 원래 타입을 유지
                 return type(item)(_deep_convert(i) for i in item)
             elif hasattr(item, '__iter__') and not isinstance(item, (str, bytes)):
                 # 다른 iterable 타입들도 처리
@@ -42,11 +43,8 @@ def _convert_numpy_types(obj):
             else:
                 return item
         except (ValueError, TypeError, OverflowError, AttributeError):
-            # 모든 변환 실패 시 문자열로 변환
-            try:
-                return str(item)
-            except:
-                return None
+            # 변환 실패 시 원본 반환 (문자열로 변환하지 않음)
+            return item
     
     return _deep_convert(obj)
 
@@ -90,11 +88,28 @@ def generate_recommendations(
         long_term_recommendations = _generate_long_term_recommendations(domain_type, opportunity_insights, analysis_results)
         strategic_recommendations = _generate_strategic_recommendations(domain_type, business_insights, analysis_results)
         
+        # 모든 리스트 타입을 보장
+        converted_immediate = _convert_numpy_types(immediate_actions)
+        if not isinstance(converted_immediate, list):
+            converted_immediate = [str(converted_immediate)] if converted_immediate else []
+        
+        converted_short = _convert_numpy_types(short_term_recommendations)
+        if not isinstance(converted_short, list):
+            converted_short = [str(converted_short)] if converted_short else []
+        
+        converted_long = _convert_numpy_types(long_term_recommendations)
+        if not isinstance(converted_long, list):
+            converted_long = [str(converted_long)] if converted_long else []
+        
+        converted_strategic = _convert_numpy_types(strategic_recommendations)
+        if not isinstance(converted_strategic, list):
+            converted_strategic = [str(converted_strategic)] if converted_strategic else []
+        
         return RecommendationOutput(
-            immediate_actions=_convert_numpy_types(immediate_actions),
-            short_term_recommendations=_convert_numpy_types(short_term_recommendations),
-            long_term_recommendations=_convert_numpy_types(long_term_recommendations),
-            strategic_recommendations=_convert_numpy_types(strategic_recommendations),
+            immediate_actions=converted_immediate,
+            short_term_recommendations=converted_short,
+            long_term_recommendations=converted_long,
+            strategic_recommendations=converted_strategic,
             success=True,
             message=f"권장사항 생성 완료: {domain_type} 도메인 권장사항 {len(immediate_actions + short_term_recommendations + long_term_recommendations + strategic_recommendations)}개 생성"
         )
