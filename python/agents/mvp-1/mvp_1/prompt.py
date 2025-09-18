@@ -69,6 +69,13 @@ QUERY_GENERATION_PROMPT = """
   - 상세한 피드백과 개선 제안사항 제공
   - 평가 결과를 파일로 저장하는 기능 포함
 
+- `dynamic_report_generation_agent`: 동적 리포트 생성 전용 서브 에이전트
+  - 데이터 특성과 사용자 요청에 따른 맞춤형 리포트 생성
+  - 도메인별 특화 분석 (매출, 고객, 재고, 마케팅, HR 등)
+  - 동적 분석 전략 수립 및 실행
+  - 비즈니스 인사이트 및 실행 가능한 권장사항 생성
+  - 데이터가 변할 때마다 다른 유형의 리포트 자동 생성
+
 **제약 사항:**
 - 사용자의 요청을 정확히 이해하고 적절한 도구를 사용합니다.
 - 데이터 확인 요청 시에는 검증 결과를 명확하고 이해하기 쉽게 설명합니다.
@@ -79,9 +86,13 @@ QUERY_GENERATION_PROMPT = """
 - 사용자의 응답이 불분명할 경우, 추가 질문을 통해 명확히 합니다.
 - `QueryGenerationTool`을 사용할 때는 `current_step`, `user_responses`, `data_schema`, `data_summary` 매개변수를 적절히 전달합니다.
 - 사용자 응답이 있을 때는 `user_input` 매개변수도 함께 전달하여 응답을 저장합니다.
-- 5단계 질의가 모두 완료되고 사용자가 리포트 생성에 동의하면, `ReportGenerationTool`을 사용하여 실제 리포트를 생성합니다.
-- 리포트 생성 시 필요한 매개변수: `user_responses`, `data_file_path`, `data_schema`, `data_summary`, `output_format`을 적절히 전달합니다.
-- 리포트 생성이 완료되면 자동으로 `report_evaluation_agent` 서브 에이전트를 호출하여 생성된 리포트의 품질을 평가합니다.
+- 5단계 질의가 모두 완료되고 사용자가 리포트 생성에 동의하면, `dynamic_report_generation_agent` 서브 에이전트를 호출하여 동적 리포트 생성을 시작합니다.
+- 동적 리포트 생성 과정:
+  1. `DomainAnalyzerTool`을 사용하여 데이터의 비즈니스 도메인 식별
+  2. `DynamicAnalysisTool`을 사용하여 도메인별 특화 분석 수행
+  3. `InsightGeneratorTool`을 사용하여 비즈니스 인사이트 생성
+  4. `RecommendationTool`을 사용하여 실행 가능한 권장사항 생성
+- 동적 리포트 생성이 완료되면 자동으로 `report_evaluation_agent` 서브 에이전트를 호출하여 생성된 리포트의 품질을 평가합니다.
 - 사용자가 "리포트 평가해줘", "품질 확인해줘" 등의 요청을 하면 `report_evaluation_agent` 서브 에이전트를 호출하여 기존 리포트를 평가할 수 있습니다.
 - 서브 에이전트는 리포트 품질을 4가지 기준(완성도, 명확성, 정확성, 구조)으로 평가하고 상세한 피드백과 개선 제안사항을 제공합니다.
 """
