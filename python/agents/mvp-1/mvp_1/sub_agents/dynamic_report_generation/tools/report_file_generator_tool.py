@@ -12,6 +12,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from ....config import REPORTS_DIR
+from .visualization_generator_tool import VisualizationGeneratorTool
 
 
 class ReportFileGeneratorInput(BaseModel):
@@ -22,6 +23,8 @@ class ReportFileGeneratorInput(BaseModel):
     user_requirements: Dict[str, Any] = Field(default_factory=dict, description="사용자 요구사항 및 선호도")
     analysis_results: Dict[str, Any] = Field(default_factory=dict, description="분석 결과 데이터")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="리포트 메타데이터")
+    data_file_path: str = Field(default="", description="분석할 데이터 파일 경로")
+    include_visualizations: bool = Field(default=True, description="시각화 요소 포함 여부")
 
 
 class ReportFileGeneratorOutput(BaseModel):
@@ -32,6 +35,9 @@ class ReportFileGeneratorOutput(BaseModel):
     file_format: str = Field(..., description="생성된 파일 형식")
     message: str = Field(..., description="처리 결과 메시지")
     additional_files: List[str] = Field(default_factory=list, description="추가로 생성된 파일들 (차트, 이미지 등)")
+    visualizations: List[Dict[str, Any]] = Field(default_factory=list, description="생성된 시각화 요소들")
+    charts_data: Dict[str, Any] = Field(default_factory=dict, description="차트 데이터")
+    tables_data: Dict[str, Any] = Field(default_factory=dict, description="테이블 데이터")
 
 
 @FunctionTool
@@ -41,7 +47,9 @@ def generate_report_file(
     output_format: str = "markdown",
     user_requirements: Optional[Dict[str, Any]] = None,
     analysis_results: Optional[Dict[str, Any]] = None,
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    data_file_path: str = "",
+    include_visualizations: bool = True
 ) -> ReportFileGeneratorOutput:
     """
     분석 결과를 바탕으로 실제 리포트 파일을 생성하여 reports 디렉토리에 저장합니다.
@@ -66,6 +74,55 @@ def generate_report_file(
         metadata = {}
     
     try:
+        # 시각화 요소 생성 (옵션)
+        visualizations = []
+        charts_data = {}
+        tables_data = {}
+        
+        if include_visualizations and data_file_path:
+            try:
+                viz_tool = VisualizationGeneratorTool()
+                domain_type = user_requirements.get('domain', '일반')
+                analysis_purpose = user_requirements.get('analysis_purpose', '일반 분석')
+                
+                viz_result = viz_tool.execute(
+                    data_file_path=data_file_path,
+                    domain_type=domain_type,
+                    analysis_purpose=analysis_purpose,
+                    analysis_results=analysis_results,
+                    visualization_requirements={},
+                    output_format=output_format
+                )
+                
+                if viz_result.success:
+                    visualizations = viz_result.visualizations
+                    charts_data = viz_result.charts_data
+                    tables_data = viz_result.tables_data
+                    additional_files.extend(viz_result.generated_files)
+                    
+                    # 차트 이미지 파일들을 additional_files에 추가
+                    chart_images = viz_result.generated_files
+                    print(f"시각화 도구에서 생성된 이미지 파일들: {chart_images}")
+                else:
+                    # 시각화 생성 실패 시에도 기본 데이터는 생성
+                    print(f"시각화 생성 실패 (기본 데이터로 계속): {viz_result.message}")
+                    # 기본 테이블 데이터 생성
+                    try:
+                        import pandas as pd
+                        df = pd.read_csv(data_file_path)
+                        tables_data = {
+                            'data_summary': {
+                                'total_rows': len(df),
+                                'total_columns': len(df.columns),
+                                'numeric_columns': len(df.select_dtypes(include=['number']).columns),
+                                'categorical_columns': len(df.select_dtypes(include=['object']).columns)
+                            }
+                        }
+                    except:
+                        pass
+            except Exception as e:
+                print(f"시각화 생성 중 오류 (무시하고 계속): {e}")
+        
         # reports 디렉토리 생성 (config.py의 REPORTS_DIR 사용)
         reports_dir = _create_reports_directory()
         
@@ -74,20 +131,20 @@ def generate_report_file(
         safe_title = _sanitize_filename(report_title)
         base_filename = f"{safe_title}_{timestamp}"
         
-        # 출력 형식에 따른 파일 생성
+        # 출력 형식에 따른 파일 생성 (시각화 요소 포함)
         if output_format.lower() == "html":
             file_content = _generate_html_report(
-                report_title, report_content, user_requirements, analysis_results, metadata
+                report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data
             )
             file_path = str(REPORTS_DIR / f"{base_filename}.html")
         elif output_format.lower() == "txt":
             file_content = _generate_text_report(
-                report_title, report_content, user_requirements, analysis_results, metadata
+                report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data
             )
             file_path = str(REPORTS_DIR / f"{base_filename}.txt")
         else:  # 기본값: markdown
             file_content = _generate_markdown_report(
-                report_title, report_content, user_requirements, analysis_results, metadata
+                report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data
             )
             file_path = str(REPORTS_DIR / f"{base_filename}.md")
         
@@ -111,7 +168,10 @@ def generate_report_file(
             file_size=file_size,
             file_format=output_format.lower(),
             message=f"리포트 파일이 성공적으로 생성되었습니다: {os.path.basename(file_path)}",
-            additional_files=additional_files
+            additional_files=additional_files,
+            visualizations=visualizations,
+            charts_data=charts_data,
+            tables_data=tables_data
         )
         
     except Exception as e:
@@ -121,7 +181,10 @@ def generate_report_file(
             file_size=0,
             file_format=output_format,
             message=f"리포트 파일 생성 중 오류가 발생했습니다: {str(e)}",
-            additional_files=[]
+            additional_files=[],
+            visualizations=[],
+            charts_data={},
+            tables_data={}
         )
 
 
@@ -159,9 +222,19 @@ def _generate_markdown_report(
     content: str, 
     user_requirements: Dict[str, Any], 
     analysis_results: Dict[str, Any], 
-    metadata: Dict[str, Any]
+    metadata: Dict[str, Any],
+    visualizations: List[Dict[str, Any]] = None,
+    charts_data: Dict[str, Any] = None,
+    tables_data: Dict[str, Any] = None
 ) -> str:
     """마크다운 형식의 리포트를 생성합니다."""
+    
+    if visualizations is None:
+        visualizations = []
+    if charts_data is None:
+        charts_data = {}
+    if tables_data is None:
+        tables_data = {}
     
     # 헤더 정보 생성
     header = f"""# {title}
@@ -170,6 +243,8 @@ def _generate_markdown_report(
 **분석 도메인:** {user_requirements.get('domain', '일반')}
 **분석 범위:** {user_requirements.get('analysis_scope', '전체 데이터')}
 **생성자:** Dynamic Report Generation Agent
+**저장 위치:** {metadata.get('reports_dir', 'data/reports')}
+**시각화 요소:** {len(visualizations)}개 포함
 
 ---
 
@@ -187,6 +262,42 @@ def _generate_markdown_report(
     # 원본 내용 추가
     full_content = header + content
     
+    # 시각화 요소 추가
+    if visualizations:
+        full_content += "\n## 📊 동적 시각화 요소\n\n"
+        
+        for i, viz in enumerate(visualizations, 1):
+            full_content += f"### {i}. {viz['title']}\n"
+            full_content += f"**유형:** {viz['type']} | **분석 유형:** {viz.get('chart_type', '일반')}\n"
+            full_content += f"**설명:** {viz['description']}\n\n"
+    
+    # 차트 데이터 요약 추가
+    if charts_data:
+        full_content += "\n## 📈 주요 차트 데이터\n\n"
+        for key, value in charts_data.items():
+            if isinstance(value, dict):
+                full_content += f"### {key}\n"
+                for sub_key, sub_value in value.items():
+                    full_content += f"- **{sub_key}:** {sub_value}\n"
+                full_content += "\n"
+    
+    # 테이블 데이터 요약 추가
+    if tables_data:
+        full_content += "\n## 📋 데이터 테이블 요약\n\n"
+        for key, value in tables_data.items():
+            if isinstance(value, dict):
+                full_content += f"### {key}\n"
+                if 'total_rows' in value:
+                    full_content += f"- **총 행 수:** {value['total_rows']:,}\n"
+                if 'total_columns' in value:
+                    full_content += f"- **총 컬럼 수:** {value['total_columns']}\n"
+                
+                # 상위 성과자 테이블
+                if 'top_performers' in value and isinstance(value['top_performers'], list):
+                    full_content += f"- **상위 성과자:** {len(value['top_performers'])}명\n"
+                
+                full_content += "\n"
+    
     # 푸터 추가
     footer = f"""
 
@@ -198,8 +309,11 @@ def _generate_markdown_report(
 - 데이터 소스: vdata 폴더
 - 분석 도메인: {user_requirements.get('domain', '일반')}
 - 저장 위치: {str(REPORTS_DIR)}
+- 시각화 요소: {len(visualizations)}개 포함
+- 차트 데이터: {len(charts_data)}개 섹션
+- 테이블 데이터: {len(tables_data)}개 섹션
 
-이 리포트는 사용자의 요구사항에 따라 동적으로 생성되었습니다.
+이 리포트는 사용자의 요구사항에 따라 동적으로 생성되었으며, 분석 목적에 맞는 시각화 요소가 포함되었습니다.
 """
     
     return full_content + footer
@@ -210,12 +324,52 @@ def _generate_html_report(
     content: str, 
     user_requirements: Dict[str, Any], 
     analysis_results: Dict[str, Any], 
-    metadata: Dict[str, Any]
+    metadata: Dict[str, Any],
+    visualizations: List[Dict[str, Any]] = None,
+    charts_data: Dict[str, Any] = None,
+    tables_data: Dict[str, Any] = None
 ) -> str:
     """HTML 형식의 리포트를 생성합니다."""
     
+    if visualizations is None:
+        visualizations = []
+    if charts_data is None:
+        charts_data = {}
+    if tables_data is None:
+        tables_data = {}
+    
     # 마크다운을 HTML로 변환하는 간단한 함수
     html_content = _markdown_to_html(content)
+    
+    # 시각화 요소 HTML 생성
+    viz_html = ""
+    if visualizations:
+        viz_html = "<h2>📊 동적 시각화 요소</h2>"
+        for i, viz in enumerate(visualizations, 1):
+            # 차트 이미지 경로 생성 (실제 이미지 파일이 있는 경우)
+            chart_image_path = f"/tmp/chart_{i-1}.png"  # 시각화 도구에서 생성한 이미지 경로
+            viz_html += f"""
+            <div class="visualization-item">
+                <h3>{i}. {viz['title']}</h3>
+                <p><strong>유형:</strong> {viz['type']} | <strong>분석 유형:</strong> {viz.get('chart_type', '일반')}</p>
+                <p><strong>설명:</strong> {viz['description']}</p>
+                <div class="chart-container">
+                    <img src="{chart_image_path}" alt="{viz['title']}" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;">
+                    <p class="chart-note">📊 {viz['title']} - {viz['type']} 차트</p>
+                </div>
+            </div>
+            """
+    
+    # 차트 데이터 HTML 생성
+    charts_html = ""
+    if charts_data:
+        charts_html = "<h2>📈 주요 차트 데이터</h2>"
+        for key, value in charts_data.items():
+            if isinstance(value, dict):
+                charts_html += f"<h3>{key}</h3><ul>"
+                for sub_key, sub_value in value.items():
+                    charts_html += f"<li><strong>{sub_key}:</strong> {sub_value}</li>"
+                charts_html += "</ul>"
     
     html_report = f"""<!DOCTYPE html>
 <html lang="ko">
@@ -293,10 +447,15 @@ def _generate_html_report(
             <strong>분석 도메인:</strong> {user_requirements.get('domain', '일반')}<br>
             <strong>분석 범위:</strong> {user_requirements.get('analysis_scope', '전체 데이터')}<br>
             <strong>생성자:</strong> Dynamic Report Generation Agent<br>
-            <strong>저장 위치:</strong> {str(REPORTS_DIR)}
+            <strong>저장 위치:</strong> {str(REPORTS_DIR)}<br>
+            <strong>시각화 요소:</strong> {len(visualizations)}개 포함
         </div>
         
         {html_content}
+        
+        {viz_html}
+        
+        {charts_html}
         
         <div class="footer">
             <p><strong>리포트 생성 정보:</strong></p>
@@ -306,8 +465,11 @@ def _generate_html_report(
                 <li>데이터 소스: vdata 폴더</li>
                 <li>분석 도메인: {user_requirements.get('domain', '일반')}</li>
                 <li>저장 위치: {str(REPORTS_DIR)}</li>
+                <li>시각화 요소: {len(visualizations)}개 포함</li>
+                <li>차트 데이터: {len(charts_data)}개 섹션</li>
+                <li>테이블 데이터: {len(tables_data)}개 섹션</li>
             </ul>
-            <p>이 리포트는 사용자의 요구사항에 따라 동적으로 생성되었습니다.</p>
+            <p>이 리포트는 사용자의 요구사항에 따라 동적으로 생성되었으며, 분석 목적에 맞는 시각화 요소가 포함되었습니다.</p>
         </div>
     </div>
 </body>
@@ -321,12 +483,42 @@ def _generate_text_report(
     content: str, 
     user_requirements: Dict[str, Any], 
     analysis_results: Dict[str, Any], 
-    metadata: Dict[str, Any]
+    metadata: Dict[str, Any],
+    visualizations: List[Dict[str, Any]] = None,
+    charts_data: Dict[str, Any] = None,
+    tables_data: Dict[str, Any] = None
 ) -> str:
     """텍스트 형식의 리포트를 생성합니다."""
     
+    if visualizations is None:
+        visualizations = []
+    if charts_data is None:
+        charts_data = {}
+    if tables_data is None:
+        tables_data = {}
+    
     # 마크다운을 텍스트로 변환
     text_content = _markdown_to_text(content)
+    
+    # 시각화 요소 텍스트 추가
+    viz_text = ""
+    if visualizations:
+        viz_text = "\n\n=== 동적 시각화 요소 ===\n"
+        for i, viz in enumerate(visualizations, 1):
+            viz_text += f"{i}. {viz['title']}\n"
+            viz_text += f"   유형: {viz['type']} | 분석 유형: {viz.get('chart_type', '일반')}\n"
+            viz_text += f"   설명: {viz['description']}\n\n"
+    
+    # 차트 데이터 텍스트 추가
+    charts_text = ""
+    if charts_data:
+        charts_text = "\n\n=== 주요 차트 데이터 ===\n"
+        for key, value in charts_data.items():
+            if isinstance(value, dict):
+                charts_text += f"{key}:\n"
+                for sub_key, sub_value in value.items():
+                    charts_text += f"  - {sub_key}: {sub_value}\n"
+                charts_text += "\n"
     
     text_report = f"""{title}
 {'=' * len(title)}
@@ -336,11 +528,13 @@ def _generate_text_report(
 분석 범위: {user_requirements.get('analysis_scope', '전체 데이터')}
 생성자: Dynamic Report Generation Agent
 저장 위치: {str(REPORTS_DIR)}
+시각화 요소: {len(visualizations)}개 포함
 
 {'=' * 80}
 
 {text_content}
-
+{viz_text}
+{charts_text}
 {'=' * 80}
 
 리포트 생성 정보:
@@ -349,8 +543,11 @@ def _generate_text_report(
 - 데이터 소스: vdata 폴더
 - 분석 도메인: {user_requirements.get('domain', '일반')}
 - 저장 위치: {str(REPORTS_DIR)}
+- 시각화 요소: {len(visualizations)}개 포함
+- 차트 데이터: {len(charts_data)}개 섹션
+- 테이블 데이터: {len(tables_data)}개 섹션
 
-이 리포트는 사용자의 요구사항에 따라 동적으로 생성되었습니다.
+이 리포트는 사용자의 요구사항에 따라 동적으로 생성되었으며, 분석 목적에 맞는 시각화 요소가 포함되었습니다.
 """
     
     return text_report
