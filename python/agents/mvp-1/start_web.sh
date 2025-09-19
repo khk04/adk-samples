@@ -6,4 +6,4 @@ echo "🌐 MVP-1: 사용자 데이터 기반 질의 생성 에이전트 웹 서�
 
 source .venv/bin/activate
 
-adk web --host 0.0.0.0 --port 8000
+adk web --host 0.0.0.0 --port 8000 --reload
