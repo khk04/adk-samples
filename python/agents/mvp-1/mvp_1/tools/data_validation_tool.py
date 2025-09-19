@@ -7,7 +7,24 @@ import pandas as pd
 import json
 import os
 import glob
+import numpy as np
 from ..config import VDATA_DIR, DEFAULT_REQUIRED_COLUMNS, DEFAULT_MIN_ROWS
+
+
+def _convert_numpy_types(obj):
+    """numpy 타입을 Python 기본 타입으로 변환하여 JSON 직렬화 오류를 방지합니다."""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: _convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [_convert_numpy_types(item) for item in obj]
+    else:
+        return obj
 
 
 class DataValidationInput(BaseModel):
@@ -97,8 +114,8 @@ def validate_data(data_directory: Optional[str] = None, required_columns: Option
                     "rows": len(df),
                     "columns": len(df.columns),
                     "column_names": df.columns.tolist(),
-                    "missing_values": df.isnull().sum().to_dict(),
-                    "data_types": df.dtypes.astype(str).to_dict(),
+                    "missing_values": _convert_numpy_types(df.isnull().sum().to_dict()),
+                    "data_types": _convert_numpy_types(df.dtypes.astype(str).to_dict()),
                     "file_size_mb": round(os.path.getsize(file_path) / (1024 * 1024), 2)
                 }
                 
@@ -121,7 +138,8 @@ def validate_data(data_directory: Optional[str] = None, required_columns: Option
                         file_info["warnings"] = file_info.get("warnings", []) + ["데이터 행 수가 적습니다 (최소 10행 권장)"]
                 
                 # 결측값 검증
-                high_missing_cols = [col for col, missing in df.isnull().sum().items() if missing > len(df) * 0.5]
+                missing_counts = _convert_numpy_types(df.isnull().sum().to_dict())
+                high_missing_cols = [col for col, missing in missing_counts.items() if missing > len(df) * 0.5]
                 if high_missing_cols:
                     file_info["warnings"] = [f"높은 결측값 비율: {high_missing_cols}"]
                 

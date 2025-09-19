@@ -6,8 +6,25 @@ from google.adk.tools.function_tool import FunctionTool
 import pandas as pd
 import json
 import os
+import numpy as np
 from ..config import PROJECT_ROOT
 from typing import Optional
+
+
+def _convert_numpy_types(obj):
+    """numpy 타입을 Python 기본 타입으로 변환하여 JSON 직렬화 오류를 방지합니다."""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: _convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [_convert_numpy_types(item) for item in obj]
+    else:
+        return obj
 
 
 def _find_data_file_for_analysis() -> Optional[str]:
@@ -115,9 +132,9 @@ def analyze_data(file_path: str = "", analysis_type: str = "basic") -> DataAnaly
             "total_rows": len(df),
             "total_columns": len(df.columns),
             "column_names": df.columns.tolist(),
-            "data_types": df.dtypes.astype(str).to_dict(),
-            "missing_values": df.isnull().sum().to_dict(),
-            "memory_usage": df.memory_usage(deep=True).sum()
+            "data_types": _convert_numpy_types(df.dtypes.astype(str).to_dict()),
+            "missing_values": _convert_numpy_types(df.isnull().sum().to_dict()),
+            "memory_usage": _convert_numpy_types(df.memory_usage(deep=True).sum())
         }
         
         # 스키마 정보
@@ -136,7 +153,10 @@ def analyze_data(file_path: str = "", analysis_type: str = "basic") -> DataAnaly
             if len(numeric_cols) > 0:
                 insights.append(f"수치형 데이터: {', '.join(numeric_cols)}")
                 for col in numeric_cols:
-                    insights.append(f"{col}: 평균 {df[col].mean():.2f}, 최대 {df[col].max():.2f}, 최소 {df[col].min():.2f}")
+                    mean_val = _convert_numpy_types(df[col].mean())
+                    max_val = _convert_numpy_types(df[col].max())
+                    min_val = _convert_numpy_types(df[col].min())
+                    insights.append(f"{col}: 평균 {mean_val:.2f}, 최대 {max_val:.2f}, 최소 {min_val:.2f}")
             
             # 범주형 컬럼 분석
             categorical_cols = df.select_dtypes(include=['object', 'category']).columns
@@ -144,7 +164,7 @@ def analyze_data(file_path: str = "", analysis_type: str = "basic") -> DataAnaly
                 insights.append(f"범주형 데이터: {', '.join(categorical_cols)}")
                 for col in categorical_cols:
                     top_values = df[col].value_counts().head(3)
-                    insights.append(f"{col} 상위값: {dict(top_values)}")
+                    insights.append(f"{col} 상위값: {_convert_numpy_types(dict(top_values))}")
         
         return DataAnalysisOutput(
             success=True,
