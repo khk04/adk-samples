@@ -10,6 +10,7 @@ from google.adk.tools.function_tool import FunctionTool
 import os
 import json
 import shutil
+import base64
 from datetime import datetime
 from pathlib import Path
 from ....config import REPORTS_DIR
@@ -465,13 +466,33 @@ def _generate_html_report(
         
         for i, viz in enumerate(visualizations, 1):
             # 실제 생성된 차트 이미지 파일 경로 사용
+            chart_image_src = ""
+            chart_image_name = "N/A"
+            
             if i-1 < len(chart_image_files) and chart_image_files[i-1]:
                 chart_image_path = Path(chart_image_files[i-1])
-                # 절대 경로를 상대 경로로 변환 (reports 디렉토리 기준)
-                chart_image_src = f"./{chart_image_path.name}"
-                print(f"차트 {i} 이미지 경로: {chart_image_src} (원본: {chart_image_files[i-1]})")
+                chart_image_name = chart_image_path.name
+                
+                # 이미지를 Base64로 인코딩하여 직접 삽입
+                try:
+                    if chart_image_path.exists():
+                        with open(chart_image_path, 'rb') as img_file:
+                            img_data = base64.b64encode(img_file.read()).decode('utf-8')
+                            chart_image_src = f"data:image/png;base64,{img_data}"
+                            print(f"차트 {i} 이미지 Base64 인코딩 완료: {chart_image_name}")
+                    else:
+                        # 파일이 없으면 절대 경로로 시도
+                        chart_image_src = f"file://{chart_image_path.absolute()}"
+                        print(f"차트 {i} 이미지 파일 없음, 절대 경로 사용: {chart_image_src}")
+                except Exception as e:
+                    # Base64 인코딩 실패 시 절대 경로로 폴백
+                    chart_image_src = f"file://{chart_image_path.absolute()}"
+                    print(f"차트 {i} Base64 인코딩 실패, 절대 경로 사용: {e}")
             else:
-                chart_image_src = f"./chart_{i-1}.png"  # 기본 패턴
+                # 기본 패턴도 절대 경로로 시도
+                default_image_path = REPORTS_DIR / f"chart_{i-1}.png"
+                chart_image_src = f"file://{default_image_path.absolute()}"
+                chart_image_name = f"chart_{i-1}.png"
                 print(f"차트 {i} 기본 경로 사용: {chart_image_src}")
             
             viz_html += f"""
@@ -481,8 +502,8 @@ def _generate_html_report(
                 <p><strong>설명:</strong> {viz['description']}</p>
                 <div class="chart-container">
                     <img src="{chart_image_src}" alt="{viz['title']}" style="max-width: 600px; width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                    <p class="chart-note" style="display: none; color: #e74c3c; font-style: italic;">차트 이미지를 로드할 수 없습니다: {chart_image_src}</p>
-                    <p class="chart-note">{viz['title']} - {viz['type']} 차트</p>
+                    <p class="chart-note" style="display: none; color: #e74c3c; font-style: italic;">차트 이미지를 로드할 수 없습니다: {chart_image_src}<br>파일 경로를 확인해주세요.</p>
+                    <p class="chart-note">{viz['title']} - {viz['type']} 차트<br>이미지 파일: {chart_image_name}</p>
                 </div>
             </div>
             """

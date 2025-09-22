@@ -2,6 +2,7 @@
 동적 리포트 생성 서브 에이전트
 
 데이터 특성과 사용자 요청에 따라 동적으로 맞춤형 리포트를 생성하는 전용 에이전트입니다.
+이미지 기반 설명 구조로 생성된 차트 이미지를 기준으로 리포트 내용을 구성합니다.
 """
 
 from google.adk.agents import Agent
@@ -23,6 +24,11 @@ def dynamic_report_generation_agent() -> Agent:
     이 에이전트는 데이터의 특성과 사용자 요청을 분석하여
     각 비즈니스 도메인에 최적화된 맞춤형 리포트를 생성하고
     실제 파일로 저장합니다.
+    
+    **이미지 기반 설명 구조:**
+    - 생성된 차트 이미지(PNG)를 기준으로 리포트 내용 구성
+    - 각 차트 이미지에 대한 상세한 분석과 해석 제공
+    - 시각적 인사이트와 비즈니스 의미를 이미지 기반으로 설명
     
     Returns:
         Agent: 구성된 동적 리포트 생성 에이전트
@@ -51,7 +57,7 @@ def dynamic_report_generation_agent() -> Agent:
         tools=tools,
         instruction=DYNAMIC_REPORT_GENERATION_PROMPT,
         name="dynamic_report_generation_agent",
-        description="데이터를 분석하여 맞춤형 리포트를 생성합니다"
+        description="데이터를 분석하여 이미지 기반 맞춤형 리포트를 생성합니다. 생성된 차트 이미지를 기준으로 리포트 내용을 구성하고 각 이미지에 대한 상세한 분석과 해석을 제공합니다."
     )
     
     return agent
