@@ -190,6 +190,7 @@ def generate_report_file(
             # HTML 파일의 경우 차트 이미지 파일들을 같은 디렉토리로 복사
             if chart_image_files:
                 _copy_chart_images_to_reports_dir(chart_image_files, REPORTS_DIR)
+                print(f"차트 이미지 파일들 복사 완료: {chart_image_files}")
         elif output_format.lower() == "txt":
             file_content = _generate_text_report(
                 report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data
@@ -254,6 +255,7 @@ def _create_reports_directory() -> str:
 def _copy_chart_images_to_reports_dir(chart_image_files: List[str], reports_dir: Path) -> None:
     """차트 이미지 파일들을 reports 디렉토리로 복사합니다."""
     try:
+        print(f"차트 이미지 복사 시작: {len(chart_image_files)}개 파일")
         for image_file in chart_image_files:
             if os.path.exists(image_file):
                 # 파일명만 추출
@@ -268,6 +270,7 @@ def _copy_chart_images_to_reports_dir(chart_image_files: List[str], reports_dir:
                     print(f"차트 이미지 이미 존재: {destination}")
             else:
                 print(f"차트 이미지 파일이 존재하지 않음: {image_file}")
+        print(f"차트 이미지 복사 완료: {len(chart_image_files)}개 파일 처리")
     except Exception as e:
         print(f"차트 이미지 복사 중 오류: {e}")
 
@@ -473,27 +476,25 @@ def _generate_html_report(
                 chart_image_path = Path(chart_image_files[i-1])
                 chart_image_name = chart_image_path.name
                 
-                # 이미지를 Base64로 인코딩하여 직접 삽입
+                # 실제 PNG 파일 경로 사용 (Base64 인코딩 대신)
                 try:
                     if chart_image_path.exists():
-                        with open(chart_image_path, 'rb') as img_file:
-                            img_data = base64.b64encode(img_file.read()).decode('utf-8')
-                            chart_image_src = f"data:image/png;base64,{img_data}"
-                            print(f"차트 {i} 이미지 Base64 인코딩 완료: {chart_image_name}")
+                        # 상대 경로 사용 (HTML 파일과 같은 디렉토리에 있으므로)
+                        chart_image_src = chart_image_name
+                        print(f"차트 {i} 이미지 상대 경로 사용: {chart_image_src}")
                     else:
                         # 파일이 없으면 절대 경로로 시도
                         chart_image_src = f"file://{chart_image_path.absolute()}"
                         print(f"차트 {i} 이미지 파일 없음, 절대 경로 사용: {chart_image_src}")
                 except Exception as e:
-                    # Base64 인코딩 실패 시 절대 경로로 폴백
-                    chart_image_src = f"file://{chart_image_path.absolute()}"
-                    print(f"차트 {i} Base64 인코딩 실패, 절대 경로 사용: {e}")
+                    # 파일 경로 설정 실패 시 기본값 사용
+                    chart_image_src = chart_image_name
+                    print(f"차트 {i} 파일 경로 설정 실패, 기본값 사용: {e}")
             else:
-                # 기본 패턴도 절대 경로로 시도
-                default_image_path = REPORTS_DIR / f"chart_{i-1}.png"
-                chart_image_src = f"file://{default_image_path.absolute()}"
+                # 기본 패턴도 상대 경로 사용
+                chart_image_src = f"chart_{i-1}.png"
                 chart_image_name = f"chart_{i-1}.png"
-                print(f"차트 {i} 기본 경로 사용: {chart_image_src}")
+                print(f"차트 {i} 기본 상대 경로 사용: {chart_image_src}")
             
             viz_html += f"""
             <div class="visualization-item">
