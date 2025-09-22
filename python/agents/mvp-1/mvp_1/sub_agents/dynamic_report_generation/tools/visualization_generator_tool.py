@@ -110,7 +110,6 @@ class VisualizationOutput(BaseModel):
     generated_files: List[str] = Field(default_factory=list, description="생성된 파일 목록")
 
 
-@FunctionTool
 def generate_dynamic_visualizations(
     data_file_path: str,
     domain_type: str,

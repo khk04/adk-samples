@@ -41,7 +41,6 @@ class ReportFileGeneratorOutput(BaseModel):
     tables_data: Dict[str, Any] = Field(default_factory=dict, description="테이블 데이터")
 
 
-@FunctionTool
 def generate_report_file(
     report_title: str,
     report_content: str,

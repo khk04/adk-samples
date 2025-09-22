@@ -31,11 +31,25 @@ def _convert_numpy_types(obj):
             elif isinstance(item, pd.Series):
                 return item.tolist()
             elif isinstance(item, pd.DataFrame):
-                return item.to_dict()
+                # DataFrame을 딕셔너리로 변환할 때 MultiIndex 문제 처리
+                try:
+                    return item.to_dict()
+                except (TypeError, ValueError):
+                    # MultiIndex 문제가 있는 경우 문자열 키로 변환
+                    return {str(k): v for k, v in item.to_dict().items()}
             elif pd.isna(item):
                 return None
             elif isinstance(item, dict):
-                return {k: _deep_convert(v) for k, v in item.items()}
+                # 딕셔너리 키가 튜플인 경우 문자열로 변환
+                converted_dict = {}
+                for k, v in item.items():
+                    if isinstance(k, tuple):
+                        # 튜플 키를 문자열로 변환
+                        converted_key = str(k)
+                    else:
+                        converted_key = k
+                    converted_dict[converted_key] = _deep_convert(v)
+                return converted_dict
             elif isinstance(item, (list, tuple)):
                 # 리스트와 튜플은 원래 타입을 유지
                 return type(item)(_deep_convert(i) for i in item)
@@ -304,9 +318,18 @@ def _analyze_product_performance(df: pd.DataFrame, product_cols: List[str], sale
     
     for product_col in product_cols:
         if product_col in df.columns:
-            product_summary = df.groupby(product_col)[sales_cols].agg(['sum', 'mean', 'count']).round(2)
+            # MultiIndex 문제를 피하기 위해 각 집계를 개별적으로 수행
+            product_summary = {}
+            for sales_col in sales_cols:
+                if sales_col in df.columns:
+                    grouped = df.groupby(product_col)[sales_col]
+                    product_summary[sales_col] = {
+                        'sum': float(grouped.sum().sum()),
+                        'mean': float(grouped.mean().mean()),
+                        'count': int(grouped.count().sum())
+                    }
             # NumPy 타입을 Python 기본 타입으로 변환
-            product_analysis[product_col] = _convert_numpy_types(product_summary.to_dict())
+            product_analysis[product_col] = _convert_numpy_types(product_summary)
     
     return product_analysis
 
@@ -317,9 +340,18 @@ def _analyze_regional_performance(df: pd.DataFrame, region_cols: List[str], sale
     
     for region_col in region_cols:
         if region_col in df.columns:
-            regional_summary = df.groupby(region_col)[sales_cols].agg(['sum', 'mean', 'count']).round(2)
+            # MultiIndex 문제를 피하기 위해 각 집계를 개별적으로 수행
+            regional_summary = {}
+            for sales_col in sales_cols:
+                if sales_col in df.columns:
+                    grouped = df.groupby(region_col)[sales_col]
+                    regional_summary[sales_col] = {
+                        'sum': float(grouped.sum().sum()),
+                        'mean': float(grouped.mean().mean()),
+                        'count': int(grouped.count().sum())
+                    }
             # NumPy 타입을 Python 기본 타입으로 변환
-            regional_analysis[region_col] = _convert_numpy_types(regional_summary.to_dict())
+            regional_analysis[region_col] = _convert_numpy_types(regional_summary)
     
     return regional_analysis
 
@@ -355,8 +387,13 @@ def _analyze_sales_trends(df: pd.DataFrame) -> Dict[str, Any]:
         sales_cols = _find_sales_columns(df)
         
         if sales_cols:
-            monthly_trends = df.groupby(df[date_col].dt.to_period('M'))[sales_cols].sum()
-            trends['monthly_trends'] = monthly_trends.to_dict()
+            # MultiIndex 문제를 피하기 위해 개별적으로 처리
+            monthly_trends = {}
+            for sales_col in sales_cols:
+                if sales_col in df.columns:
+                    monthly_data = df.groupby(df[date_col].dt.to_period('M'))[sales_col].sum()
+                    monthly_trends[sales_col] = {str(k): float(v) for k, v in monthly_data.to_dict().items()}
+            trends['monthly_trends'] = monthly_trends
     
     return trends
 
@@ -507,8 +544,13 @@ def _analyze_customer_trends(df: pd.DataFrame) -> Dict[str, Any]:
         customer_cols = _find_customer_columns(df)
         
         if customer_cols:
-            monthly_trends = df.groupby(df[date_col].dt.to_period('M'))[customer_cols].nunique()
-            trends['monthly_customer_trends'] = monthly_trends.to_dict()
+            # MultiIndex 문제를 피하기 위해 개별적으로 처리
+            monthly_trends = {}
+            for col in customer_cols:
+                if col in df.columns:
+                    monthly_data = df.groupby(df[date_col].dt.to_period('M'))[col].nunique()
+                    monthly_trends[col] = {str(k): int(v) for k, v in monthly_data.to_dict().items()}
+            trends['monthly_customer_trends'] = monthly_trends
     
     return trends
 
@@ -560,10 +602,22 @@ def _analyze_general_domain(df: pd.DataFrame, user_responses: Dict[str, Any]) ->
     """일반 도메인 분석을 수행합니다."""
     results = {}
     
-    # 기본 통계 분석
+    # 기본 통계 분석 - MultiIndex 문제를 피하기 위해 개별적으로 처리
     numeric_cols = df.select_dtypes(include=[np.number]).columns
     if len(numeric_cols) > 0:
-        results['basic_statistics'] = df[numeric_cols].describe().to_dict()
+        basic_stats = {}
+        for col in numeric_cols:
+            basic_stats[col] = {
+                'count': float(df[col].count()),
+                'mean': float(df[col].mean()),
+                'std': float(df[col].std()),
+                'min': float(df[col].min()),
+                '25%': float(df[col].quantile(0.25)),
+                '50%': float(df[col].median()),
+                '75%': float(df[col].quantile(0.75)),
+                'max': float(df[col].max())
+            }
+        results['basic_statistics'] = basic_stats
     
     # 범주형 데이터 분석
     categorical_cols = df.select_dtypes(include=['object', 'category']).columns
@@ -605,8 +659,13 @@ def _analyze_general_trends(df: pd.DataFrame) -> Dict[str, Any]:
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         
         if len(numeric_cols) > 0:
-            monthly_trends = df.groupby(df[date_col].dt.to_period('M'))[numeric_cols].mean()
-            trends['monthly_trends'] = monthly_trends.to_dict()
+            # MultiIndex 문제를 피하기 위해 개별적으로 처리
+            monthly_trends = {}
+            for col in numeric_cols:
+                if col in df.columns:
+                    monthly_data = df.groupby(df[date_col].dt.to_period('M'))[col].mean()
+                    monthly_trends[col] = {str(k): float(v) for k, v in monthly_data.to_dict().items()}
+            trends['monthly_trends'] = monthly_trends
     
     return trends
 
@@ -678,8 +737,13 @@ def _perform_criteria_based_analysis(df: pd.DataFrame, analysis_criteria: str, u
             date_col = date_cols[0]
             numeric_cols = df.select_dtypes(include=[np.number]).columns
             if len(numeric_cols) > 0:
-                trend_analysis = df.groupby(df[date_col].dt.to_period('M'))[numeric_cols].mean()
-                additional_analysis['trend_analysis'] = _convert_numpy_types(trend_analysis.to_dict())
+                # MultiIndex 문제를 피하기 위해 개별적으로 처리
+                trend_analysis = {}
+                for col in numeric_cols:
+                    if col in df.columns:
+                        monthly_data = df.groupby(df[date_col].dt.to_period('M'))[col].mean()
+                        trend_analysis[col] = {str(k): float(v) for k, v in monthly_data.to_dict().items()}
+                additional_analysis['trend_analysis'] = trend_analysis
     
     return additional_analysis
 
