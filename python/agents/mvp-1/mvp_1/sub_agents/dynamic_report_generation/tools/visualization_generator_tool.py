@@ -51,6 +51,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 import json
+from .image_utils import save_chart_image, ImageConfig
 
 
 def _convert_numpy_types(obj):
@@ -990,15 +991,8 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
                 
                 plt.tight_layout()
                 
-                # 이미지 저장 (reports 디렉토리에 저장)
-                from pathlib import Path
-                reports_dir = Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports")
-                reports_dir.mkdir(parents=True, exist_ok=True)
-                image_path = str(reports_dir / f"chart_{timestamp}_{index}.png")
-                plt.savefig(image_path, dpi=200, bbox_inches='tight', facecolor='white')  # DPI 축소
-                plt.close()
-                
-                print(f"차트 이미지 저장 완료: {image_path}")
+                # 공통 이미지 저장 함수 사용
+                image_path = save_chart_image(plt.gcf(), timestamp, index, "bar_chart")
                 return image_path
                 
             except Exception as e:
@@ -1025,15 +1019,8 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
         
         plt.tight_layout()
         
-        # 이미지 저장 (reports 디렉토리에 저장)
-        from pathlib import Path
-        reports_dir = Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports")
-        reports_dir.mkdir(parents=True, exist_ok=True)
-        image_path = str(reports_dir / f"chart_{timestamp}_{index}.png")
-        plt.savefig(image_path, dpi=200, bbox_inches='tight', facecolor='white')  # DPI 축소
-        plt.close()
-        
-        print(f"차트 이미지 저장 완료 (샘플 데이터): {image_path}")
+        # 공통 이미지 저장 함수 사용
+        image_path = save_chart_image(plt.gcf(), timestamp, index, "bar_chart_sample")
         return image_path
         
     except Exception as e:
@@ -1076,10 +1063,8 @@ def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, i
                 
                 plt.tight_layout()
                 
-                image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-                plt.savefig(image_path, dpi=200, bbox_inches='tight', facecolor='white')  # DPI 축소
-                plt.close()
-                
+                # 공통 이미지 저장 함수 사용
+                image_path = save_chart_image(plt.gcf(), timestamp, index, "line_chart")
                 return image_path
                 
             except Exception as e:
@@ -1102,10 +1087,8 @@ def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, i
         
         plt.tight_layout()
         
-        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-        plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
-        plt.close()
-        
+        # 공통 이미지 저장 함수 사용
+        image_path = save_chart_image(plt.gcf(), timestamp, index, "line_chart_sample")
         return image_path
         
     except Exception as e:
@@ -1153,10 +1136,8 @@ def _create_pie_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
                 
                 plt.axis('equal')
                 
-                image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-                plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
-                plt.close()
-                
+                # 공통 이미지 저장 함수 사용
+                image_path = save_chart_image(plt.gcf(), timestamp, index, "pie_chart")
                 return image_path
                 
             except Exception as e:
@@ -1181,10 +1162,8 @@ def _create_pie_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
         
         plt.axis('equal')
         
-        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-        plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
-        plt.close()
-        
+        # 공통 이미지 저장 함수 사용
+        image_path = save_chart_image(plt.gcf(), timestamp, index, "pie_chart_sample")
         return image_path
         
     except Exception as e:
@@ -1220,10 +1199,8 @@ def _create_histogram(viz_config: Dict[str, Any], title: str, timestamp: str, in
                     
                     plt.tight_layout()
                     
-                    image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-                    plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
-                    plt.close()
-                    
+                    # 공통 이미지 저장 함수 사용
+                    image_path = save_chart_image(plt.gcf(), timestamp, index, "histogram")
                     return image_path
                 else:
                     print(f"히스토그램용 데이터가 없음: {column}")
@@ -1246,10 +1223,8 @@ def _create_histogram(viz_config: Dict[str, Any], title: str, timestamp: str, in
         
         plt.tight_layout()
         
-        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-        plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
-        plt.close()
-        
+        # 공통 이미지 저장 함수 사용
+        image_path = save_chart_image(plt.gcf(), timestamp, index, "histogram_sample")
         return image_path
         
     except Exception as e:
@@ -1292,10 +1267,8 @@ def _create_scatter_plot(viz_config: Dict[str, Any], title: str, timestamp: str,
                     
                     plt.tight_layout()
                     
-                    image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-                    plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
-                    plt.close()
-                    
+                    # 공통 이미지 저장 함수 사용
+                    image_path = save_chart_image(plt.gcf(), timestamp, index, "scatter_plot")
                     return image_path
                 else:
                     print(f"산점도용 데이터가 없음: {x_column}, {y_column}")
@@ -1320,10 +1293,8 @@ def _create_scatter_plot(viz_config: Dict[str, Any], title: str, timestamp: str,
         
         plt.tight_layout()
         
-        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-        plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
-        plt.close()
-        
+        # 공통 이미지 저장 함수 사용
+        image_path = save_chart_image(plt.gcf(), timestamp, index, "scatter_plot_sample")
         return image_path
         
     except Exception as e:
@@ -1375,10 +1346,8 @@ def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, ind
                         
                         plt.tight_layout()
                         
-                        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-                        plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
-                        plt.close()
-                        
+                        # 공통 이미지 저장 함수 사용
+                        image_path = save_chart_image(plt.gcf(), timestamp, index, "box_plot")
                         return image_path
                 
                 # 방법 2: 여러 수치형 컬럼이 있는 경우
@@ -1412,10 +1381,8 @@ def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, ind
                             
                             plt.tight_layout()
                             
-                            image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-                            plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
-                            plt.close()
-                            
+                            # 공통 이미지 저장 함수 사용
+                            image_path = save_chart_image(plt.gcf(), timestamp, index, "box_plot_multi")
                             return image_path
                 
             except Exception as e:
@@ -1444,10 +1411,8 @@ def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, ind
         
         plt.tight_layout()
         
-        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-        plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
-        plt.close()
-        
+        # 공통 이미지 저장 함수 사용
+        image_path = save_chart_image(plt.gcf(), timestamp, index, "box_plot_sample")
         return image_path
         
     except Exception as e:

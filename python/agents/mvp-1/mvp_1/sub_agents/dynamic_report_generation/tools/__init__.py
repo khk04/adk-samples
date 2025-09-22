@@ -7,11 +7,15 @@ from .dynamic_analysis_tool import DynamicAnalysisTool
 from .insight_generator_tool import InsightGeneratorTool
 from .recommendation_tool import RecommendationTool
 from .report_file_generator_tool import ReportFileGeneratorTool
+from .visualization_generator_tool import VisualizationGeneratorTool
+from . import image_utils
 
 __all__ = [
     'DomainAnalyzerTool',
     'DynamicAnalysisTool', 
     'InsightGeneratorTool',
     'RecommendationTool',
-    'ReportFileGeneratorTool'
+    'ReportFileGeneratorTool',
+    'VisualizationGeneratorTool',
+    'image_utils'
 ]
