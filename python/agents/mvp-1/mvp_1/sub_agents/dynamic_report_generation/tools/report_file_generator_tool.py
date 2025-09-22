@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from google.adk.tools.function_tool import FunctionTool
 import os
 import json
+import shutil
 from datetime import datetime
 from pathlib import Path
 from ....config import REPORTS_DIR
@@ -78,6 +79,8 @@ def generate_report_file(
         visualizations = []
         charts_data = {}
         tables_data = {}
+        chart_image_files = []  # 차트 이미지 파일 경로 초기화
+        additional_files = []  # 추가 파일 목록 초기화
         
         if include_visualizations and data_file_path:
             try:
@@ -103,9 +106,15 @@ def generate_report_file(
                     # 차트 이미지 파일들을 additional_files에 추가
                     chart_images = viz_result.generated_files
                     print(f"시각화 도구에서 생성된 이미지 파일들: {chart_images}")
+                    
+                    # 차트 이미지 파일 경로를 로컬 변수로 저장
+                    chart_image_files = [f for f in chart_images if f.endswith('.png')]
+                    print(f"차트 이미지 파일 경로: {chart_image_files}")
                 else:
                     # 시각화 생성 실패 시에도 기본 데이터는 생성
                     print(f"시각화 생성 실패 (기본 데이터로 계속): {viz_result.message}")
+                    # 차트 이미지 파일 경로 초기화
+                    chart_image_files = []
                     # 기본 테이블 데이터 생성
                     try:
                         import pandas as pd
@@ -122,6 +131,8 @@ def generate_report_file(
                         pass
             except Exception as e:
                 print(f"시각화 생성 중 오류 (무시하고 계속): {e}")
+                # 오류 발생 시에도 변수 초기화
+                chart_image_files = []
         
         # reports 디렉토리 생성 (config.py의 REPORTS_DIR 사용)
         reports_dir = _create_reports_directory()
@@ -134,9 +145,13 @@ def generate_report_file(
         # 출력 형식에 따른 파일 생성 (시각화 요소 포함)
         if output_format.lower() == "html":
             file_content = _generate_html_report(
-                report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data
+                report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data, chart_image_files
             )
             file_path = str(REPORTS_DIR / f"{base_filename}.html")
+            
+            # HTML 파일의 경우 차트 이미지 파일들을 같은 디렉토리로 복사
+            if chart_image_files:
+                _copy_chart_images_to_reports_dir(chart_image_files, REPORTS_DIR)
         elif output_format.lower() == "txt":
             file_content = _generate_text_report(
                 report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data
@@ -158,7 +173,6 @@ def generate_report_file(
         # 메타데이터 파일 생성
         metadata_file = _generate_metadata_file(base_filename, metadata, analysis_results)
         
-        additional_files = []
         if metadata_file:
             additional_files.append(metadata_file)
         
@@ -197,6 +211,27 @@ def _create_reports_directory() -> str:
     os.makedirs(reports_dir, exist_ok=True)
     
     return reports_dir
+
+
+def _copy_chart_images_to_reports_dir(chart_image_files: List[str], reports_dir: Path) -> None:
+    """차트 이미지 파일들을 reports 디렉토리로 복사합니다."""
+    try:
+        for image_file in chart_image_files:
+            if os.path.exists(image_file):
+                # 파일명만 추출
+                filename = os.path.basename(image_file)
+                destination = reports_dir / filename
+                
+                # 파일이 이미 존재하지 않는 경우에만 복사
+                if not destination.exists():
+                    shutil.copy2(image_file, destination)
+                    print(f"차트 이미지 복사 완료: {image_file} -> {destination}")
+                else:
+                    print(f"차트 이미지 이미 존재: {destination}")
+            else:
+                print(f"차트 이미지 파일이 존재하지 않음: {image_file}")
+    except Exception as e:
+        print(f"차트 이미지 복사 중 오류: {e}")
 
 
 def _sanitize_filename(filename: str) -> str:
@@ -327,7 +362,8 @@ def _generate_html_report(
     metadata: Dict[str, Any],
     visualizations: List[Dict[str, Any]] = None,
     charts_data: Dict[str, Any] = None,
-    tables_data: Dict[str, Any] = None
+    tables_data: Dict[str, Any] = None,
+    chart_image_files: List[str] = None
 ) -> str:
     """HTML 형식의 리포트를 생성합니다."""
     
@@ -337,6 +373,8 @@ def _generate_html_report(
         charts_data = {}
     if tables_data is None:
         tables_data = {}
+    if chart_image_files is None:
+        chart_image_files = []
     
     # 마크다운을 HTML로 변환하는 간단한 함수
     html_content = _markdown_to_html(content)
@@ -345,16 +383,29 @@ def _generate_html_report(
     viz_html = ""
     if visualizations:
         viz_html = "<h2>📊 동적 시각화 요소</h2>"
+        
+        # 파라미터로 전달받은 차트 이미지 파일 경로 사용
+        print(f"HTML 생성 시 사용할 차트 이미지 파일들: {chart_image_files}")
+        
         for i, viz in enumerate(visualizations, 1):
-            # 차트 이미지 경로 생성 (실제 이미지 파일이 있는 경우)
-            chart_image_path = f"/tmp/chart_{i-1}.png"  # 시각화 도구에서 생성한 이미지 경로
+            # 실제 생성된 차트 이미지 파일 경로 사용
+            if i-1 < len(chart_image_files) and chart_image_files[i-1]:
+                chart_image_path = Path(chart_image_files[i-1])
+                # 절대 경로를 상대 경로로 변환 (reports 디렉토리 기준)
+                chart_image_src = f"./{chart_image_path.name}"
+                print(f"차트 {i} 이미지 경로: {chart_image_src} (원본: {chart_image_files[i-1]})")
+            else:
+                chart_image_src = f"./chart_{i-1}.png"  # 기본 패턴
+                print(f"차트 {i} 기본 경로 사용: {chart_image_src}")
+            
             viz_html += f"""
             <div class="visualization-item">
                 <h3>{i}. {viz['title']}</h3>
                 <p><strong>유형:</strong> {viz['type']} | <strong>분석 유형:</strong> {viz.get('chart_type', '일반')}</p>
                 <p><strong>설명:</strong> {viz['description']}</p>
                 <div class="chart-container">
-                    <img src="{chart_image_path}" alt="{viz['title']}" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;">
+                    <img src="{chart_image_src}" alt="{viz['title']}" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <p class="chart-note" style="display: none; color: #e74c3c; font-style: italic;">⚠️ 차트 이미지를 로드할 수 없습니다: {chart_image_src}</p>
                     <p class="chart-note">📊 {viz['title']} - {viz['type']} 차트</p>
                 </div>
             </div>
@@ -436,6 +487,26 @@ def _generate_html_report(
             color: #7f8c8d;
             font-size: 0.9em;
         }}
+        .visualization-item {{
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }}
+        .chart-container {{
+            margin: 15px 0;
+            text-align: center;
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .chart-note {{
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }}
     </style>
 </head>
 <body>
@@ -448,7 +519,8 @@ def _generate_html_report(
             <strong>분석 범위:</strong> {user_requirements.get('analysis_scope', '전체 데이터')}<br>
             <strong>생성자:</strong> Dynamic Report Generation Agent<br>
             <strong>저장 위치:</strong> {str(REPORTS_DIR)}<br>
-            <strong>시각화 요소:</strong> {len(visualizations)}개 포함
+            <strong>시각화 요소:</strong> {len(visualizations)}개 포함<br>
+            <strong>차트 이미지:</strong> {len(chart_image_files)}개 생성
         </div>
         
         {html_content}
@@ -468,6 +540,7 @@ def _generate_html_report(
                 <li>시각화 요소: {len(visualizations)}개 포함</li>
                 <li>차트 데이터: {len(charts_data)}개 섹션</li>
                 <li>테이블 데이터: {len(tables_data)}개 섹션</li>
+                <li>차트 이미지 파일: {len(chart_image_files)}개 생성</li>
             </ul>
             <p>이 리포트는 사용자의 요구사항에 따라 동적으로 생성되었으며, 분석 목적에 맞는 시각화 요소가 포함되었습니다.</p>
         </div>

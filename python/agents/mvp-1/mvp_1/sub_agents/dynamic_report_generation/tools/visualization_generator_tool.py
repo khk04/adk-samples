@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from google.adk.tools.function_tool import FunctionTool
 import pandas as pd
 import numpy as np
+from pathlib import Path
 
 try:
     import matplotlib.pyplot as plt
@@ -966,11 +967,15 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
                 
                 plt.tight_layout()
                 
-                # 이미지 저장
-                image_path = f"/tmp/chart_{timestamp}_{index}.png"
+                # 이미지 저장 (reports 디렉토리에 저장)
+                from pathlib import Path
+                reports_dir = Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports")
+                reports_dir.mkdir(parents=True, exist_ok=True)
+                image_path = str(reports_dir / f"chart_{timestamp}_{index}.png")
                 plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
                 plt.close()
                 
+                print(f"차트 이미지 저장 완료: {image_path}")
                 return image_path
                 
             except Exception as e:
@@ -996,11 +1001,15 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
         
         plt.tight_layout()
         
-        # 이미지 저장
-        image_path = f"/tmp/chart_{timestamp}_{index}.png"
+        # 이미지 저장 (reports 디렉토리에 저장)
+        from pathlib import Path
+        reports_dir = Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports")
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        image_path = str(reports_dir / f"chart_{timestamp}_{index}.png")
         plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close()
         
+        print(f"차트 이미지 저장 완료 (샘플 데이터): {image_path}")
         return image_path
         
     except Exception as e:
@@ -1041,7 +1050,7 @@ def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, i
                 
                 plt.tight_layout()
                 
-                image_path = f"/tmp/chart_{timestamp}_{index}.png"
+                image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
                 plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
                 plt.close()
                 
@@ -1065,7 +1074,7 @@ def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, i
         
         plt.tight_layout()
         
-        image_path = f"/tmp/chart_{timestamp}_{index}.png"
+        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
         plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close()
         
@@ -1116,7 +1125,7 @@ def _create_pie_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
                 
                 plt.axis('equal')
                 
-                image_path = f"/tmp/chart_{timestamp}_{index}.png"
+                image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
                 plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
                 plt.close()
                 
@@ -1144,7 +1153,7 @@ def _create_pie_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
         
         plt.axis('equal')
         
-        image_path = f"/tmp/chart_{timestamp}_{index}.png"
+        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
         plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close()
         
@@ -1183,7 +1192,7 @@ def _create_histogram(viz_config: Dict[str, Any], title: str, timestamp: str, in
                     
                     plt.tight_layout()
                     
-                    image_path = f"/tmp/chart_{timestamp}_{index}.png"
+                    image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
                     plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
                     plt.close()
                     
@@ -1209,7 +1218,7 @@ def _create_histogram(viz_config: Dict[str, Any], title: str, timestamp: str, in
         
         plt.tight_layout()
         
-        image_path = f"/tmp/chart_{timestamp}_{index}.png"
+        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
         plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close()
         
@@ -1255,7 +1264,7 @@ def _create_scatter_plot(viz_config: Dict[str, Any], title: str, timestamp: str,
                     
                     plt.tight_layout()
                     
-                    image_path = f"/tmp/chart_{timestamp}_{index}.png"
+                    image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
                     plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
                     plt.close()
                     
@@ -1283,7 +1292,7 @@ def _create_scatter_plot(viz_config: Dict[str, Any], title: str, timestamp: str,
         
         plt.tight_layout()
         
-        image_path = f"/tmp/chart_{timestamp}_{index}.png"
+        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
         plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close()
         
@@ -1338,7 +1347,7 @@ def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, ind
                         
                         plt.tight_layout()
                         
-                        image_path = f"/tmp/chart_{timestamp}_{index}.png"
+                        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
                         plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
                         plt.close()
                         
@@ -1375,7 +1384,7 @@ def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, ind
                             
                             plt.tight_layout()
                             
-                            image_path = f"/tmp/chart_{timestamp}_{index}.png"
+                            image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
                             plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
                             plt.close()
                             
@@ -1407,7 +1416,7 @@ def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, ind
         
         plt.tight_layout()
         
-        image_path = f"/tmp/chart_{timestamp}_{index}.png"
+        image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
         plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close()
         
