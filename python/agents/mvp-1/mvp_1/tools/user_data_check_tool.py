@@ -60,7 +60,7 @@ def check_user_data_request(user_request: str = "데이터 확인해줘", data_d
         
         if is_data_check_request:
             # 직접적인 데이터 확인 요청
-            message = f"네, 데이터 상태를 확인해드리겠습니다! 📊\n\n현재 '{data_directory}' 디렉토리의 데이터를 검증하겠습니다."
+            message = f"네, 데이터 상태를 확인해드리겠습니다!\n\n현재 '{data_directory}' 디렉토리의 데이터를 검증하겠습니다."
             should_validate = True
             validation_params = {
                 "data_directory": data_directory,
@@ -70,7 +70,7 @@ def check_user_data_request(user_request: str = "데이터 확인해줘", data_d
             
         elif is_report_request:
             # 리포트 생성 요청
-            message = f"리포트 생성을 도와드리겠습니다! 📈\n\nvdata 폴더의 데이터를 사용하여 6단계 질의를 통해 맞춤형 리포트를 생성하겠습니다."
+            message = f"리포트 생성을 도와드리겠습니다!\n\nvdata 폴더의 데이터를 사용하여 6단계 질의를 통해 맞춤형 리포트를 생성하겠습니다."
             should_validate = True
             validation_params = {
                 "data_directory": data_directory,
@@ -80,7 +80,7 @@ def check_user_data_request(user_request: str = "데이터 확인해줘", data_d
             
         else:
             # 일반적인 요청
-            message = "안녕하세요! 👋\n\n저는 vdata 폴더의 데이터를 분석하여 최적의 리포트를 생성하는 에이전트입니다.\n\n다음과 같은 요청을 도와드릴 수 있습니다:\n• 데이터 확인: '데이터 확인해줘'\n• 리포트 생성: '데이터를 기반으로 리포트를 작성해 주세요'\n• 분석 시작: '분석을 시작해줘'"
+            message = "안녕하세요!\n\n저는 vdata 폴더의 데이터를 분석하여 최적의 리포트를 생성하는 에이전트입니다.\n\n다음과 같은 요청을 도와드릴 수 있습니다:\n• 데이터 확인: '데이터 확인해줘'\n• 리포트 생성: '데이터를 기반으로 리포트를 작성해 주세요'\n• 분석 시작: '분석을 시작해줘'"
             should_validate = False
             validation_params = {}
         

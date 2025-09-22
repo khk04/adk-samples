@@ -937,18 +937,18 @@ def _create_actual_charts(visualizations: List[Dict[str, Any]], charts_data: Dic
                 
                 if image_path and os.path.exists(image_path):
                     generated_images.append(image_path)
-                    print(f"✅ 차트 생성 성공: {image_path}")
+                    print(f"차트 생성 성공: {image_path}")
                 else:
-                    print(f"❌ 차트 생성 실패: {title}")
+                    print(f"차트 생성 실패: {title}")
                     
             except Exception as e:
-                print(f"❌ 차트 {i+1} 생성 실패: {e}")
+                print(f"차트 {i+1} 생성 실패: {e}")
                 continue
         
         print(f"\n총 {len(generated_images)}개 차트 이미지 생성 완료")
         
     except Exception as e:
-        print(f"❌ 차트 생성 중 전체 오류: {e}")
+        print(f"차트 생성 중 전체 오류: {e}")
     
     return generated_images
 
@@ -1003,11 +1003,11 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
                 return image_path
                 
             except Exception as e:
-                print(f"❌ 실제 데이터로 막대 차트 생성 실패: {e}")
+                print(f"실제 데이터로 막대 차트 생성 실패: {e}")
                 plt.close()
         
         # 실제 데이터 사용 실패 시 샘플 데이터 사용 (fallback)
-        print(f"⚠️ 실제 데이터 사용 실패, 샘플 데이터로 막대 차트 생성: {title}")
+        print(f"실제 데이터 사용 실패, 샘플 데이터로 막대 차트 생성: {title}")
         categories = ['개발팀', '마케팅팀', '영업팀', '인사팀']
         values = [15, 10, 20, 5]
         
@@ -1559,7 +1559,7 @@ def _generate_html_visualizations(visualizations: List[Dict[str, Any]], charts_d
 </head>
 <body>
     <div class="container">
-        <h1>📊 동적 시각화 리포트</h1>
+        <h1>동적 시각화 리포트</h1>
         <p><strong>생성 시간:</strong> {datetime.now().strftime("%Y년 %m월 %d일 %H:%M:%S")}</p>
         
         <div class="stats-grid">
@@ -1581,7 +1581,7 @@ def _generate_html_visualizations(visualizations: List[Dict[str, Any]], charts_d
             </div>
         </div>
         
-        <h2>📈 생성된 차트 이미지</h2>
+        <h2>생성된 차트 이미지</h2>
 """
     
     # 실제 차트 이미지 표시
@@ -1600,7 +1600,7 @@ def _generate_html_visualizations(visualizations: List[Dict[str, Any]], charts_d
 """
     
     html_content += """
-        <h2>📋 시각화 설정 정보</h2>
+        <h2>시각화 설정 정보</h2>
         <div class="table-container">
             <table>
                 <tr><th>시각화 제목</th><th>타입</th><th>설명</th><th>차트 유형</th></tr>
@@ -1620,7 +1620,7 @@ def _generate_html_visualizations(visualizations: List[Dict[str, Any]], charts_d
             </table>
         </div>
         
-        <h2>📈 차트 데이터 요약</h2>
+        <h2>차트 데이터 요약</h2>
         <div class="table-container">
             <table>
                 <tr><th>데이터 유형</th><th>요약 정보</th></tr>
@@ -1634,7 +1634,7 @@ def _generate_html_visualizations(visualizations: List[Dict[str, Any]], charts_d
             </table>
         </div>
         
-        <h2>📋 테이블 데이터 요약</h2>
+        <h2>테이블 데이터 요약</h2>
         <div class="table-container">
             <table>
                 <tr><th>테이블 유형</th><th>행 수</th><th>설명</th></tr>

@@ -95,7 +95,7 @@ def analyze_data(file_path: str = "", analysis_type: str = "basic") -> DataAnaly
     try:
         # 파일 경로 자동 탐지
         if not file_path:
-            print("📂 데이터 파일 자동 탐지 시작...")
+            print("데이터 파일 자동 탐지 시작...")
             file_path = _find_data_file_for_analysis()
             if not file_path:
                 return DataAnalysisOutput(
@@ -103,7 +103,7 @@ def analyze_data(file_path: str = "", analysis_type: str = "basic") -> DataAnaly
                     error_message="분석할 데이터 파일을 찾을 수 없습니다. vdata 폴더에 CSV 또는 Excel 파일이 있는지 확인해주세요."
                 )
             else:
-                print(f"✅ 데이터 파일 발견: {file_path}")
+                print(f"데이터 파일 발견: {file_path}")
         
         # 경로 해석 개선 - 상대 경로를 절대 경로로 변환 (config 사용)
         if not os.path.isabs(file_path):

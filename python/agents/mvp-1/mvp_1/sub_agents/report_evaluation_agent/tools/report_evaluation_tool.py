@@ -156,24 +156,24 @@ def _evaluate_completeness(report_content: str, required_sections: List[str]) ->
     
     if not missing_sections:
         score += 40
-        feedback_parts.append("✅ 모든 필수 섹션이 포함되어 있습니다.")
+        feedback_parts.append("모든 필수 섹션이 포함되어 있습니다.")
     else:
         missing_count = len(missing_sections)
         section_score = max(0, 40 - (missing_count * 10))
         score += section_score
-        feedback_parts.append(f"⚠️ 누락된 필수 섹션: {', '.join(missing_sections)}")
+        feedback_parts.append(f"누락된 필수 섹션: {', '.join(missing_sections)}")
     
     # 2. 내용의 충실도 (30점)
     content_length = len(report_content.strip())
     if content_length > 2000:
         score += 30
-        feedback_parts.append("✅ 충분한 내용이 포함되어 있습니다.")
+        feedback_parts.append("충분한 내용이 포함되어 있습니다.")
     elif content_length > 1000:
         score += 20
-        feedback_parts.append("⚠️ 내용이 다소 부족할 수 있습니다.")
+        feedback_parts.append("내용이 다소 부족할 수 있습니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 내용이 부족합니다.")
+        feedback_parts.append("내용이 부족합니다.")
     
     # 3. 데이터 분석의 구체성 (30점)
     data_indicators = [
@@ -184,13 +184,13 @@ def _evaluate_completeness(report_content: str, required_sections: List[str]) ->
     data_mentions = sum(1 for indicator in data_indicators if indicator in report_content)
     if data_mentions >= 5:
         score += 30
-        feedback_parts.append("✅ 구체적인 데이터 분석이 포함되어 있습니다.")
+        feedback_parts.append("구체적인 데이터 분석이 포함되어 있습니다.")
     elif data_mentions >= 3:
         score += 20
-        feedback_parts.append("⚠️ 데이터 분석이 다소 부족합니다.")
+        feedback_parts.append("데이터 분석이 다소 부족합니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 구체적인 데이터 분석이 부족합니다.")
+        feedback_parts.append("구체적인 데이터 분석이 부족합니다.")
     
     feedback = " ".join(feedback_parts)
     return min(100, score), feedback
@@ -205,13 +205,13 @@ def _evaluate_clarity(report_content: str) -> tuple[float, str]:
     headers = re.findall(r'^#{1,6}\s+(.+)$', report_content, re.MULTILINE)
     if len(headers) >= 4:
         score += 40
-        feedback_parts.append("✅ 명확한 구조로 구성되어 있습니다.")
+        feedback_parts.append("명확한 구조로 구성되어 있습니다.")
     elif len(headers) >= 2:
         score += 25
-        feedback_parts.append("⚠️ 구조가 다소 단순합니다.")
+        feedback_parts.append("구조가 다소 단순합니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 구조가 불명확합니다.")
+        feedback_parts.append("구조가 불명확합니다.")
     
     # 2. 문장의 명확성 (30점)
     sentences = re.split(r'[.!?]', report_content)
@@ -219,13 +219,13 @@ def _evaluate_clarity(report_content: str) -> tuple[float, str]:
     
     if len(long_sentences) == 0:
         score += 30
-        feedback_parts.append("✅ 문장이 명확하고 이해하기 쉽습니다.")
+        feedback_parts.append("문장이 명확하고 이해하기 쉽습니다.")
     elif len(long_sentences) <= 2:
         score += 20
-        feedback_parts.append("⚠️ 일부 문장이 길어 이해하기 어려울 수 있습니다.")
+        feedback_parts.append("일부 문장이 길어 이해하기 어려울 수 있습니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 문장이 너무 길어 가독성이 떨어집니다.")
+        feedback_parts.append("문장이 너무 길어 가독성이 떨어집니다.")
     
     # 3. 용어의 일관성 (30점)
     # 반복되는 키워드 확인
@@ -238,13 +238,13 @@ def _evaluate_clarity(report_content: str) -> tuple[float, str]:
     consistent_terms = sum(1 for freq in word_freq.values() if freq >= 3)
     if consistent_terms >= 3:
         score += 30
-        feedback_parts.append("✅ 핵심 용어가 일관되게 사용되었습니다.")
+        feedback_parts.append("핵심 용어가 일관되게 사용되었습니다.")
     elif consistent_terms >= 1:
         score += 20
-        feedback_parts.append("⚠️ 용어 사용의 일관성이 다소 부족합니다.")
+        feedback_parts.append("용어 사용의 일관성이 다소 부족합니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 용어 사용이 일관되지 않습니다.")
+        feedback_parts.append("용어 사용이 일관되지 않습니다.")
     
     feedback = " ".join(feedback_parts)
     return min(100, score), feedback
@@ -261,13 +261,13 @@ def _evaluate_accuracy(report_content: str) -> tuple[float, str]:
     
     if len(numbers) >= 5 and len(percentages) >= 2:
         score += 40
-        feedback_parts.append("✅ 구체적인 수치 데이터가 포함되어 있습니다.")
+        feedback_parts.append("구체적인 수치 데이터가 포함되어 있습니다.")
     elif len(numbers) >= 3:
         score += 25
-        feedback_parts.append("⚠️ 수치 데이터가 다소 부족합니다.")
+        feedback_parts.append("수치 데이터가 다소 부족합니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 구체적인 수치 데이터가 부족합니다.")
+        feedback_parts.append("구체적인 수치 데이터가 부족합니다.")
     
     # 2. 논리적 일관성 (30점)
     # 모순되는 표현 확인
@@ -283,13 +283,13 @@ def _evaluate_accuracy(report_content: str) -> tuple[float, str]:
     
     if contradiction_count == 0:
         score += 30
-        feedback_parts.append("✅ 논리적으로 일관된 내용입니다.")
+        feedback_parts.append("논리적으로 일관된 내용입니다.")
     elif contradiction_count <= 1:
         score += 20
-        feedback_parts.append("⚠️ 일부 논리적 불일치가 있을 수 있습니다.")
+        feedback_parts.append("일부 논리적 불일치가 있을 수 있습니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 논리적 일관성에 문제가 있습니다.")
+        feedback_parts.append("논리적 일관성에 문제가 있습니다.")
     
     # 3. 근거의 충실성 (30점)
     evidence_indicators = [
@@ -300,13 +300,13 @@ def _evaluate_accuracy(report_content: str) -> tuple[float, str]:
     evidence_count = sum(1 for indicator in evidence_indicators if indicator in report_content)
     if evidence_count >= 3:
         score += 30
-        feedback_parts.append("✅ 충분한 근거가 제시되었습니다.")
+        feedback_parts.append("충분한 근거가 제시되었습니다.")
     elif evidence_count >= 1:
         score += 20
-        feedback_parts.append("⚠️ 근거 제시가 다소 부족합니다.")
+        feedback_parts.append("근거 제시가 다소 부족합니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 근거 제시가 부족합니다.")
+        feedback_parts.append("근거 제시가 부족합니다.")
     
     feedback = " ".join(feedback_parts)
     return min(100, score), feedback
@@ -324,13 +324,13 @@ def _evaluate_structure(report_content: str) -> tuple[float, str]:
     
     if h1_count >= 1 and h2_count >= 3:
         score += 40
-        feedback_parts.append("✅ 적절한 헤더 구조를 가지고 있습니다.")
+        feedback_parts.append("적절한 헤더 구조를 가지고 있습니다.")
     elif h2_count >= 2:
         score += 25
-        feedback_parts.append("⚠️ 헤더 구조가 다소 단순합니다.")
+        feedback_parts.append("헤더 구조가 다소 단순합니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 헤더 구조가 부족합니다.")
+        feedback_parts.append("헤더 구조가 부족합니다.")
     
     # 2. 목록과 표 사용 (30점)
     list_items = len(re.findall(r'^\s*[-*+]\s+', report_content, re.MULTILINE))
@@ -338,13 +338,13 @@ def _evaluate_structure(report_content: str) -> tuple[float, str]:
     
     if list_items >= 5 or table_rows >= 3:
         score += 30
-        feedback_parts.append("✅ 목록과 표를 효과적으로 활용했습니다.")
+        feedback_parts.append("목록과 표를 효과적으로 활용했습니다.")
     elif list_items >= 3 or table_rows >= 1:
         score += 20
-        feedback_parts.append("⚠️ 목록과 표 활용이 다소 부족합니다.")
+        feedback_parts.append("목록과 표 활용이 다소 부족합니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 목록과 표 활용이 부족합니다.")
+        feedback_parts.append("목록과 표 활용이 부족합니다.")
     
     # 3. 흐름과 연결성 (30점)
     transition_words = [
@@ -355,13 +355,13 @@ def _evaluate_structure(report_content: str) -> tuple[float, str]:
     transition_count = sum(1 for word in transition_words if word in report_content)
     if transition_count >= 3:
         score += 30
-        feedback_parts.append("✅ 내용 간 연결이 자연스럽습니다.")
+        feedback_parts.append("내용 간 연결이 자연스럽습니다.")
     elif transition_count >= 1:
         score += 20
-        feedback_parts.append("⚠️ 내용 간 연결이 다소 부족합니다.")
+        feedback_parts.append("내용 간 연결이 다소 부족합니다.")
     else:
         score += 10
-        feedback_parts.append("❌ 내용 간 연결이 부족합니다.")
+        feedback_parts.append("내용 간 연결이 부족합니다.")
     
     feedback = " ".join(feedback_parts)
     return min(100, score), feedback
@@ -419,26 +419,26 @@ def _generate_improvement_suggestions(
     for criterion, score in section_scores.items():
         if score < 60:
             if criterion == "completeness":
-                suggestions.append("📝 완성도 개선: 누락된 필수 섹션을 추가하고 내용을 더 풍부하게 작성하세요.")
+                suggestions.append("완성도 개선: 누락된 필수 섹션을 추가하고 내용을 더 풍부하게 작성하세요.")
             elif criterion == "clarity":
-                suggestions.append("📖 명확성 개선: 문장을 더 간결하게 하고 구조를 명확히 하세요.")
+                suggestions.append("명확성 개선: 문장을 더 간결하게 하고 구조를 명확히 하세요.")
             elif criterion == "accuracy":
-                suggestions.append("📊 정확성 개선: 구체적인 수치 데이터와 근거를 더 많이 포함하세요.")
+                suggestions.append("정확성 개선: 구체적인 수치 데이터와 근거를 더 많이 포함하세요.")
             elif criterion == "structure":
-                suggestions.append("🏗️ 구조 개선: 헤더를 활용한 체계적인 구성과 목록/표를 활용하세요.")
+                suggestions.append("구조 개선: 헤더를 활용한 체계적인 구성과 목록/표를 활용하세요.")
     
     # 누락된 필수 섹션에 대한 제안
     missing_sections = [section for section, exists in required_sections_check.items() if not exists]
     if missing_sections:
-        suggestions.append(f"📋 필수 섹션 추가: {', '.join(missing_sections)} 섹션을 추가하세요.")
+        suggestions.append(f"필수 섹션 추가: {', '.join(missing_sections)} 섹션을 추가하세요.")
     
     # 전체적인 개선 제안
     overall_score = sum(section_scores.values()) / len(section_scores)
     if overall_score < 70:
-        suggestions.append("🎯 전반적인 품질 향상: 데이터 분석의 깊이를 높이고 구체적인 인사이트를 제시하세요.")
+        suggestions.append("전반적인 품질 향상: 데이터 분석의 깊이를 높이고 구체적인 인사이트를 제시하세요.")
     
     if not suggestions:
-        suggestions.append("🎉 리포트 품질이 우수합니다! 현재 수준을 유지하세요.")
+        suggestions.append("리포트 품질이 우수합니다! 현재 수준을 유지하세요.")
     
     return suggestions
 

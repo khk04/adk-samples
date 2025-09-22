@@ -82,7 +82,7 @@ def save_report_evaluation(
                 f.write("=== 필수 섹션 확인 ===\n")
                 required_sections_check = evaluation_result.get('required_sections_check', {})
                 for section, exists in required_sections_check.items():
-                    status = "✅ 포함" if exists else "❌ 누락"
+                    status = "포함" if exists else "누락"
                     f.write(f"- {section}: {status}\n")
                 f.write("\n")
                 

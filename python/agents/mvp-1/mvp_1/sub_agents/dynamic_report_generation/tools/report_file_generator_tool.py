@@ -314,21 +314,21 @@ def _generate_markdown_report(
     domain = user_requirements.get('domain', '일반')
     analysis_scope = user_requirements.get('analysis_scope', '전체 데이터')
     
-    header = f"""# 📊 {title}
+    header = f"""# {title}
 
-> **📅 분석 완료일:** {current_time}  
-> **🎯 분석 영역:** {domain}  
-> **📈 분석 범위:** {analysis_scope}  
-> **🎨 시각화:** {len(visualizations)}개 차트 포함
+> **분석 완료일:** {current_time}  
+> **분석 영역:** {domain}  
+> **분석 범위:** {analysis_scope}  
+> **시각화:** {len(visualizations)}개 차트 포함
 
 ---
 
-## 🎯 **이 리포트로 무엇을 할 수 있나요?**
+## **이 리포트로 무엇을 할 수 있나요?**
 
-✅ **즉시 활용 가능한 인사이트** - 데이터에서 발견된 핵심 패턴과 트렌드  
-✅ **실행 가능한 권장사항** - 구체적인 개선 방안과 실행 계획  
-✅ **시각적 분석 결과** - 이해하기 쉬운 차트와 그래프  
-✅ **비즈니스 의사결정 지원** - 데이터 기반의 객관적 근거  
+**즉시 활용 가능한 인사이트** - 데이터에서 발견된 핵심 패턴과 트렌드  
+**실행 가능한 권장사항** - 구체적인 개선 방안과 실행 계획  
+**시각적 분석 결과** - 이해하기 쉬운 차트와 그래프  
+**비즈니스 의사결정 지원** - 데이터 기반의 객관적 근거  
 
 ---
 
@@ -336,7 +336,7 @@ def _generate_markdown_report(
     
     # 사용자 요구사항 섹션 추가 (더 친화적으로)
     if user_requirements:
-        header += """## 📋 **분석 요청사항 요약**
+        header += """## **분석 요청사항 요약**
 
 """
         # 사용자 친화적인 키 매핑
@@ -360,32 +360,32 @@ def _generate_markdown_report(
     
     # 시각화 요소 추가 (더 친화적으로)
     if visualizations:
-        full_content += "\n## 📊 **시각화 분석 결과**\n\n"
-        full_content += "> 💡 **아래 차트들을 통해 데이터의 패턴과 트렌드를 시각적으로 확인할 수 있습니다.**\n\n"
+        full_content += "\n## **시각화 분석 결과**\n\n"
+        full_content += "> **아래 차트들을 통해 데이터의 패턴과 트렌드를 시각적으로 확인할 수 있습니다.**\n\n"
         
         for i, viz in enumerate(visualizations, 1):
-            full_content += f"### 📈 {i}. {viz['title']}\n"
+            full_content += f"### {i}. {viz['title']}\n"
             full_content += f"**차트 유형:** {viz['type']} | **분석 목적:** {viz.get('chart_type', '일반 분석')}\n"
-            full_content += f"**📝 설명:** {viz['description']}\n\n"
+            full_content += f"**설명:** {viz['description']}\n\n"
     
     # 차트 데이터 요약 추가 (더 친화적으로)
     if charts_data:
-        full_content += "\n## 📈 **주요 차트 데이터 요약**\n\n"
-        full_content += "> 📊 **아래는 생성된 차트들의 핵심 데이터 요약입니다.**\n\n"
+        full_content += "\n## **주요 차트 데이터 요약**\n\n"
+        full_content += "> **아래는 생성된 차트들의 핵심 데이터 요약입니다.**\n\n"
         for key, value in charts_data.items():
             if isinstance(value, dict):
-                full_content += f"### 📊 {key}\n"
+                full_content += f"### {key}\n"
                 for sub_key, sub_value in value.items():
                     full_content += f"• **{sub_key}:** {sub_value}\n"
                 full_content += "\n"
     
     # 테이블 데이터 요약 추가 (더 친화적으로)
     if tables_data:
-        full_content += "\n## 📋 **데이터 테이블 요약**\n\n"
-        full_content += "> 📊 **아래는 분석에 사용된 주요 테이블 데이터 요약입니다.**\n\n"
+        full_content += "\n## **데이터 테이블 요약**\n\n"
+        full_content += "> **아래는 분석에 사용된 주요 테이블 데이터 요약입니다.**\n\n"
         for key, value in tables_data.items():
             if isinstance(value, dict):
-                full_content += f"### 📊 {key}\n"
+                full_content += f"### {key}\n"
                 if 'total_rows' in value:
                     full_content += f"• **총 데이터 건수:** {value['total_rows']:,}개\n"
                 if 'total_columns' in value:
@@ -402,25 +402,25 @@ def _generate_markdown_report(
 
 ---
 
-## 🎉 **리포트 생성 완료!**
+## **리포트 생성 완료!**
 
-> **📅 생성 완료:** {datetime.now().strftime("%Y년 %m월 %d일 %H:%M")}  
-> **📁 저장 위치:** data/reports/ 폴더  
-> **🎯 다음 단계:** 위의 인사이트와 권장사항을 검토하고 실행 계획을 수립해보세요!
+> **생성 완료:** {datetime.now().strftime("%Y년 %m월 %d일 %H:%M")}  
+> **저장 위치:** data/reports/ 폴더  
+> **다음 단계:** 위의 인사이트와 권장사항을 검토하고 실행 계획을 수립해보세요!
 
-### 💡 **이 리포트를 어떻게 활용하시겠어요?**
+### **이 리포트를 어떻게 활용하시겠어요?**
 
-1. **📊 팀과 공유** - 핵심 인사이트를 팀원들과 논의
-2. **🚀 실행 계획 수립** - 권장사항 중 우선순위 높은 항목부터 실행
-3. **📈 정기 모니터링** - 데이터 업데이트 후 트렌드 변화 추적
-4. **🔍 추가 분석** - 궁금한 부분에 대한 심화 분석 요청
+1. **팀과 공유** - 핵심 인사이트를 팀원들과 논의
+2. **실행 계획 수립** - 권장사항 중 우선순위 높은 항목부터 실행
+3. **정기 모니터링** - 데이터 업데이트 후 트렌드 변화 추적
+4. **추가 분석** - 궁금한 부분에 대한 심화 분석 요청
 
-### 📋 **리포트 구성 정보**
+### **리포트 구성 정보**
 - **분석 영역:** {user_requirements.get('domain', '일반')}
 - **시각화 요소:** {len(visualizations)}개 차트 포함
 - **데이터 섹션:** {len(charts_data)}개 차트 데이터, {len(tables_data)}개 테이블 데이터
 
-> **💬 궁금한 점이 있으시거나 추가 분석이 필요하시면 언제든 말씀해 주세요!**
+> **궁금한 점이 있으시거나 추가 분석이 필요하시면 언제든 말씀해 주세요!**
 """
     
     return full_content + footer
@@ -455,9 +455,9 @@ def _generate_html_report(
     viz_html = ""
     if visualizations:
         viz_html = """
-        <h2>📊 <strong>시각화 분석 결과</strong></h2>
+        <h2><strong>시각화 분석 결과</strong></h2>
         <div class="info-box">
-            <p>💡 <strong>아래 차트들을 통해 데이터의 패턴과 트렌드를 시각적으로 확인할 수 있습니다.</strong></p>
+            <p><strong>아래 차트들을 통해 데이터의 패턴과 트렌드를 시각적으로 확인할 수 있습니다.</strong></p>
         </div>
         """
         
@@ -477,13 +477,13 @@ def _generate_html_report(
             
             viz_html += f"""
             <div class="visualization-item">
-                <h3>📈 {i}. {viz['title']}</h3>
+                <h3>{i}. {viz['title']}</h3>
                 <p><strong>차트 유형:</strong> {viz['type']} | <strong>분석 목적:</strong> {viz.get('chart_type', '일반 분석')}</p>
-                <p><strong>📝 설명:</strong> {viz['description']}</p>
+                <p><strong>설명:</strong> {viz['description']}</p>
                 <div class="chart-container">
                     <img src="{chart_image_src}" alt="{viz['title']}" style="max-width: 600px; width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                    <p class="chart-note" style="display: none; color: #e74c3c; font-style: italic;">⚠️ 차트 이미지를 로드할 수 없습니다: {chart_image_src}</p>
-                    <p class="chart-note">📊 {viz['title']} - {viz['type']} 차트</p>
+                    <p class="chart-note" style="display: none; color: #e74c3c; font-style: italic;">차트 이미지를 로드할 수 없습니다: {chart_image_src}</p>
+                    <p class="chart-note">{viz['title']} - {viz['type']} 차트</p>
                 </div>
             </div>
             """
@@ -491,7 +491,7 @@ def _generate_html_report(
     # 차트 데이터 HTML 생성
     charts_html = ""
     if charts_data:
-        charts_html = "<h2>📈 주요 차트 데이터</h2>"
+        charts_html = "<h2>주요 차트 데이터</h2>"
         for key, value in charts_data.items():
             if isinstance(value, dict):
                 charts_html += f"<h3>{key}</h3><ul>"
@@ -591,17 +591,17 @@ def _generate_html_report(
         <h1>{title}</h1>
         
         <div class="metadata">
-            <h3>🎯 이 리포트로 무엇을 할 수 있나요?</h3>
+            <h3>이 리포트로 무엇을 할 수 있나요?</h3>
             <div class="highlight">
-                <p>✅ <strong>즉시 활용 가능한 인사이트</strong> - 데이터에서 발견된 핵심 패턴과 트렌드</p>
-                <p>✅ <strong>실행 가능한 권장사항</strong> - 구체적인 개선 방안과 실행 계획</p>
-                <p>✅ <strong>시각적 분석 결과</strong> - 이해하기 쉬운 차트와 그래프</p>
-                <p>✅ <strong>비즈니스 의사결정 지원</strong> - 데이터 기반의 객관적 근거</p>
+                <p><strong>즉시 활용 가능한 인사이트</strong> - 데이터에서 발견된 핵심 패턴과 트렌드</p>
+                <p><strong>실행 가능한 권장사항</strong> - 구체적인 개선 방안과 실행 계획</p>
+                <p><strong>시각적 분석 결과</strong> - 이해하기 쉬운 차트와 그래프</p>
+                <p><strong>비즈니스 의사결정 지원</strong> - 데이터 기반의 객관적 근거</p>
             </div>
-            <p><strong>📅 분석 완료일:</strong> {datetime.now().strftime("%Y년 %m월 %d일 %H:%M")}</p>
-            <p><strong>🎯 분석 영역:</strong> {user_requirements.get('domain', '일반')}</p>
-            <p><strong>📈 분석 범위:</strong> {user_requirements.get('analysis_scope', '전체 데이터')}</p>
-            <p><strong>🎨 시각화:</strong> {len(visualizations)}개 차트 포함</p>
+            <p><strong>분석 완료일:</strong> {datetime.now().strftime("%Y년 %m월 %d일 %H:%M")}</p>
+            <p><strong>분석 영역:</strong> {user_requirements.get('domain', '일반')}</p>
+            <p><strong>분석 범위:</strong> {user_requirements.get('analysis_scope', '전체 데이터')}</p>
+            <p><strong>시각화:</strong> {len(visualizations)}개 차트 포함</p>
         </div>
         
         {html_content}
@@ -611,22 +611,22 @@ def _generate_html_report(
         {charts_html}
         
         <div class="footer">
-            <h2>🎉 <strong>리포트 생성 완료!</strong></h2>
+            <h2><strong>리포트 생성 완료!</strong></h2>
             <div class="highlight">
-                <p><strong>📅 생성 완료:</strong> {datetime.now().strftime("%Y년 %m월 %d일 %H:%M")}</p>
-                <p><strong>📁 저장 위치:</strong> data/reports/ 폴더</p>
-                <p><strong>🎯 다음 단계:</strong> 위의 인사이트와 권장사항을 검토하고 실행 계획을 수립해보세요!</p>
+                <p><strong>생성 완료:</strong> {datetime.now().strftime("%Y년 %m월 %d일 %H:%M")}</p>
+                <p><strong>저장 위치:</strong> data/reports/ 폴더</p>
+                <p><strong>다음 단계:</strong> 위의 인사이트와 권장사항을 검토하고 실행 계획을 수립해보세요!</p>
             </div>
             
-            <h3>💡 <strong>이 리포트를 어떻게 활용하시겠어요?</strong></h3>
+            <h3><strong>이 리포트를 어떻게 활용하시겠어요?</strong></h3>
             <ol>
-                <li><strong>📊 팀과 공유</strong> - 핵심 인사이트를 팀원들과 논의</li>
-                <li><strong>🚀 실행 계획 수립</strong> - 권장사항 중 우선순위 높은 항목부터 실행</li>
-                <li><strong>📈 정기 모니터링</strong> - 데이터 업데이트 후 트렌드 변화 추적</li>
-                <li><strong>🔍 추가 분석</strong> - 궁금한 부분에 대한 심화 분석 요청</li>
+                <li><strong>팀과 공유</strong> - 핵심 인사이트를 팀원들과 논의</li>
+                <li><strong>실행 계획 수립</strong> - 권장사항 중 우선순위 높은 항목부터 실행</li>
+                <li><strong>정기 모니터링</strong> - 데이터 업데이트 후 트렌드 변화 추적</li>
+                <li><strong>추가 분석</strong> - 궁금한 부분에 대한 심화 분석 요청</li>
             </ol>
             
-            <h3>📋 <strong>리포트 구성 정보</strong></h3>
+            <h3><strong>리포트 구성 정보</strong></h3>
             <ul>
                 <li><strong>분석 영역:</strong> {user_requirements.get('domain', '일반')}</li>
                 <li><strong>시각화 요소:</strong> {len(visualizations)}개 차트 포함</li>
@@ -634,7 +634,7 @@ def _generate_html_report(
             </ul>
             
             <div class="highlight">
-                <p><strong>💬 궁금한 점이 있으시거나 추가 분석이 필요하시면 언제든 말씀해 주세요!</strong></p>
+                <p><strong>궁금한 점이 있으시거나 추가 분석이 필요하시면 언제든 말씀해 주세요!</strong></p>
             </div>
         </div>
     </div>
@@ -669,12 +669,12 @@ def _generate_text_report(
     # 시각화 요소 텍스트 추가 (더 친화적으로)
     viz_text = ""
     if visualizations:
-        viz_text = "\n\n=== 📊 시각화 분석 결과 ===\n"
-        viz_text += "💡 아래 차트들을 통해 데이터의 패턴과 트렌드를 시각적으로 확인할 수 있습니다.\n\n"
+        viz_text = "\n\n=== 시각화 분석 결과 ===\n"
+        viz_text += "아래 차트들을 통해 데이터의 패턴과 트렌드를 시각적으로 확인할 수 있습니다.\n\n"
         for i, viz in enumerate(visualizations, 1):
-            viz_text += f"📈 {i}. {viz['title']}\n"
+            viz_text += f"{i}. {viz['title']}\n"
             viz_text += f"   차트 유형: {viz['type']} | 분석 목적: {viz.get('chart_type', '일반 분석')}\n"
-            viz_text += f"   📝 설명: {viz['description']}\n\n"
+            viz_text += f"   설명: {viz['description']}\n\n"
     
     # 차트 데이터 텍스트 추가
     charts_text = ""
@@ -687,19 +687,19 @@ def _generate_text_report(
                     charts_text += f"  - {sub_key}: {sub_value}\n"
                 charts_text += "\n"
     
-    text_report = f"""📊 {title}
+    text_report = f"""{title}
 {'=' * (len(title) + 2)}
 
-🎯 이 리포트로 무엇을 할 수 있나요?
-✅ 즉시 활용 가능한 인사이트 - 데이터에서 발견된 핵심 패턴과 트렌드
-✅ 실행 가능한 권장사항 - 구체적인 개선 방안과 실행 계획
-✅ 시각적 분석 결과 - 이해하기 쉬운 차트와 그래프
-✅ 비즈니스 의사결정 지원 - 데이터 기반의 객관적 근거
+이 리포트로 무엇을 할 수 있나요?
+- 즉시 활용 가능한 인사이트 - 데이터에서 발견된 핵심 패턴과 트렌드
+- 실행 가능한 권장사항 - 구체적인 개선 방안과 실행 계획
+- 시각적 분석 결과 - 이해하기 쉬운 차트와 그래프
+- 비즈니스 의사결정 지원 - 데이터 기반의 객관적 근거
 
-📅 분석 완료일: {datetime.now().strftime("%Y년 %m월 %d일 %H:%M")}
-🎯 분석 영역: {user_requirements.get('domain', '일반')}
-📈 분석 범위: {user_requirements.get('analysis_scope', '전체 데이터')}
-🎨 시각화: {len(visualizations)}개 차트 포함
+분석 완료일: {datetime.now().strftime("%Y년 %m월 %d일 %H:%M")}
+분석 영역: {user_requirements.get('domain', '일반')}
+분석 범위: {user_requirements.get('analysis_scope', '전체 데이터')}
+시각화: {len(visualizations)}개 차트 포함
 
 {'=' * 80}
 
@@ -708,24 +708,24 @@ def _generate_text_report(
 {charts_text}
 {'=' * 80}
 
-🎉 리포트 생성 완료!
+리포트 생성 완료!
 
-📅 생성 완료: {datetime.now().strftime("%Y년 %m월 %d일 %H:%M")}
-📁 저장 위치: data/reports/ 폴더
-🎯 다음 단계: 위의 인사이트와 권장사항을 검토하고 실행 계획을 수립해보세요!
+생성 완료: {datetime.now().strftime("%Y년 %m월 %d일 %H:%M")}
+저장 위치: data/reports/ 폴더
+다음 단계: 위의 인사이트와 권장사항을 검토하고 실행 계획을 수립해보세요!
 
-💡 이 리포트를 어떻게 활용하시겠어요?
-1. 📊 팀과 공유 - 핵심 인사이트를 팀원들과 논의
-2. 🚀 실행 계획 수립 - 권장사항 중 우선순위 높은 항목부터 실행
-3. 📈 정기 모니터링 - 데이터 업데이트 후 트렌드 변화 추적
-4. 🔍 추가 분석 - 궁금한 부분에 대한 심화 분석 요청
+이 리포트를 어떻게 활용하시겠어요?
+1. 팀과 공유 - 핵심 인사이트를 팀원들과 논의
+2. 실행 계획 수립 - 권장사항 중 우선순위 높은 항목부터 실행
+3. 정기 모니터링 - 데이터 업데이트 후 트렌드 변화 추적
+4. 추가 분석 - 궁금한 부분에 대한 심화 분석 요청
 
-📋 리포트 구성 정보
+리포트 구성 정보
 - 분석 영역: {user_requirements.get('domain', '일반')}
 - 시각화 요소: {len(visualizations)}개 차트 포함
 - 데이터 섹션: {len(charts_data)}개 차트 데이터, {len(tables_data)}개 테이블 데이터
 
-💬 궁금한 점이 있으시거나 추가 분석이 필요하시면 언제든 말씀해 주세요!
+궁금한 점이 있으시거나 추가 분석이 필요하시면 언제든 말씀해 주세요!
 """
     
     return text_report
