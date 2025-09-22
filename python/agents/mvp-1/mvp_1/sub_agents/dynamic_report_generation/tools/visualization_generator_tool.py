@@ -15,9 +15,32 @@ try:
     import matplotlib.pyplot as plt
     import seaborn as sns
     import plotly.express as px
+    import matplotlib.font_manager as fm
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
     VISUALIZATION_LIBS_AVAILABLE = True
+    
+    # 한글 폰트 설정
+    try:
+        # macOS에서 사용 가능한 한글 폰트들
+        korean_fonts = ['AppleGothic', 'Malgun Gothic', 'NanumGothic', 'Noto Sans CJK KR', 'Arial Unicode MS']
+        available_fonts = [f.name for f in fm.fontManager.ttflist]
+        
+        for font in korean_fonts:
+            if font in available_fonts:
+                plt.rcParams['font.family'] = font
+                plt.rcParams['axes.unicode_minus'] = False
+                print(f"한글 폰트 설정 완료: {font}")
+                break
+        else:
+            print("한글 폰트를 찾을 수 없습니다. 기본 폰트를 사용합니다.")
+            plt.rcParams['font.family'] = 'DejaVu Sans'
+            plt.rcParams['axes.unicode_minus'] = False
+    except Exception as e:
+        print(f"한글 폰트 설정 실패: {e}")
+        plt.rcParams['font.family'] = 'DejaVu Sans'
+        plt.rcParams['axes.unicode_minus'] = False
+        
 except ImportError:
     # 시각화 라이브러리가 없어도 기본 기능은 동작하도록 함
     VISUALIZATION_LIBS_AVAILABLE = False
@@ -953,17 +976,18 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
                 # 데이터 타입 변환 (numpy 타입 처리)
                 values = [float(v) if pd.notna(v) else 0 for v in values]
                 
-                plt.figure(figsize=(10, 6))
+                plt.figure(figsize=(8, 5))  # 이미지 크기 축소
                 bars = plt.bar(categories, values, color=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#F39C12', '#9B59B6'])
-                plt.title(title, fontsize=14, fontweight='bold')
-                plt.xlabel(x_column, fontsize=12)
-                plt.ylabel(y_column, fontsize=12)
-                plt.xticks(rotation=45)
+                plt.title(title, fontsize=12, fontweight='bold', pad=20)  # 폰트 크기 축소
+                plt.xlabel(x_column, fontsize=10)  # 폰트 크기 축소
+                plt.ylabel(y_column, fontsize=10)  # 폰트 크기 축소
+                plt.xticks(rotation=45, fontsize=9)  # 폰트 크기 축소
+                plt.yticks(fontsize=9)  # y축 폰트 크기 축소
                 
                 # 값 표시
                 for bar, value in zip(bars, values):
                     plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(values)*0.01, 
-                            f'{value:.1f}', ha='center', va='bottom')
+                            f'{value:.1f}', ha='center', va='bottom', fontsize=8)  # 폰트 크기 축소
                 
                 plt.tight_layout()
                 
@@ -972,7 +996,7 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
                 reports_dir = Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports")
                 reports_dir.mkdir(parents=True, exist_ok=True)
                 image_path = str(reports_dir / f"chart_{timestamp}_{index}.png")
-                plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
+                plt.savefig(image_path, dpi=200, bbox_inches='tight', facecolor='white')  # DPI 축소
                 plt.close()
                 
                 print(f"차트 이미지 저장 완료: {image_path}")
@@ -987,17 +1011,18 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
         categories = ['개발팀', '마케팅팀', '영업팀', '인사팀']
         values = [15, 10, 20, 5]
         
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(8, 5))  # 이미지 크기 축소
         bars = plt.bar(categories, values, color=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'])
-        plt.title(f"{title} (샘플 데이터)", fontsize=14, fontweight='bold')
-        plt.xlabel('부서', fontsize=12)
-        plt.ylabel('이탈률 (%)', fontsize=12)
-        plt.xticks(rotation=45)
+        plt.title(f"{title} (샘플 데이터)", fontsize=12, fontweight='bold', pad=20)  # 폰트 크기 축소
+        plt.xlabel('부서', fontsize=10)  # 폰트 크기 축소
+        plt.ylabel('이탈률 (%)', fontsize=10)  # 폰트 크기 축소
+        plt.xticks(rotation=45, fontsize=9)  # 폰트 크기 축소
+        plt.yticks(fontsize=9)  # y축 폰트 크기 축소
         
         # 값 표시
         for bar, value in zip(bars, values):
             plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5, 
-                    f'{value}%', ha='center', va='bottom')
+                    f'{value}%', ha='center', va='bottom', fontsize=8)  # 폰트 크기 축소
         
         plt.tight_layout()
         
@@ -1006,7 +1031,7 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
         reports_dir = Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports")
         reports_dir.mkdir(parents=True, exist_ok=True)
         image_path = str(reports_dir / f"chart_{timestamp}_{index}.png")
-        plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
+        plt.savefig(image_path, dpi=200, bbox_inches='tight', facecolor='white')  # DPI 축소
         plt.close()
         
         print(f"차트 이미지 저장 완료 (샘플 데이터): {image_path}")
@@ -1041,17 +1066,19 @@ def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, i
                 # 데이터 타입 변환 (numpy 타입 처리)
                 y_data = [float(v) if pd.notna(v) else 0 for v in y_data]
                 
-                plt.figure(figsize=(10, 6))
-                plt.plot(x_data, y_data, marker='o', linewidth=2, markersize=6, color='#4ECDC4')
-                plt.title(title, fontsize=14, fontweight='bold')
-                plt.xlabel(x_column if x_column != 'index' else '순서', fontsize=12)
-                plt.ylabel(y_column, fontsize=12)
+                plt.figure(figsize=(8, 5))  # 이미지 크기 축소
+                plt.plot(x_data, y_data, marker='o', linewidth=2, markersize=4, color='#4ECDC4')  # 마커 크기 축소
+                plt.title(title, fontsize=12, fontweight='bold', pad=20)  # 폰트 크기 축소
+                plt.xlabel(x_column if x_column != 'index' else '순서', fontsize=10)  # 폰트 크기 축소
+                plt.ylabel(y_column, fontsize=10)  # 폰트 크기 축소
+                plt.xticks(fontsize=9)  # 폰트 크기 축소
+                plt.yticks(fontsize=9)  # 폰트 크기 축소
                 plt.grid(True, alpha=0.3)
                 
                 plt.tight_layout()
                 
                 image_path = str(Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/reports") / f"chart_{timestamp}_{index}.png")
-                plt.savefig(image_path, dpi=300, bbox_inches='tight', facecolor='white')
+                plt.savefig(image_path, dpi=200, bbox_inches='tight', facecolor='white')  # DPI 축소
                 plt.close()
                 
                 return image_path
@@ -1065,11 +1092,13 @@ def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, i
         x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         y = [10, 12, 15, 13, 17, 20, 18, 22, 25, 23]
         
-        plt.figure(figsize=(10, 6))
-        plt.plot(x, y, marker='o', linewidth=2, markersize=6, color='#4ECDC4')
-        plt.title(f"{title} (샘플 데이터)", fontsize=14, fontweight='bold')
-        plt.xlabel('월', fontsize=12)
-        plt.ylabel('이탈자 수', fontsize=12)
+        plt.figure(figsize=(8, 5))  # 이미지 크기 축소
+        plt.plot(x, y, marker='o', linewidth=2, markersize=4, color='#4ECDC4')  # 마커 크기 축소
+        plt.title(f"{title} (샘플 데이터)", fontsize=12, fontweight='bold', pad=20)  # 폰트 크기 축소
+        plt.xlabel('월', fontsize=10)  # 폰트 크기 축소
+        plt.ylabel('이탈자 수', fontsize=10)  # 폰트 크기 축소
+        plt.xticks(fontsize=9)  # 폰트 크기 축소
+        plt.yticks(fontsize=9)  # 폰트 크기 축소
         plt.grid(True, alpha=0.3)
         
         plt.tight_layout()

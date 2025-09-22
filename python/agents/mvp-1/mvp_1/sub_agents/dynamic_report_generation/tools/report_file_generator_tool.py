@@ -84,11 +84,12 @@ def generate_report_file(
         
         if include_visualizations and data_file_path:
             try:
-                viz_tool = VisualizationGeneratorTool()
+                # VisualizationGeneratorTool의 execute는 FunctionTool이므로 직접 호출
+                from .visualization_generator_tool import generate_dynamic_visualizations
                 domain_type = user_requirements.get('domain', '일반')
                 analysis_purpose = user_requirements.get('analysis_purpose', '일반 분석')
                 
-                viz_result = viz_tool.execute(
+                viz_result = generate_dynamic_visualizations(
                     data_file_path=data_file_path,
                     domain_type=domain_type,
                     analysis_purpose=analysis_purpose,
@@ -171,7 +172,7 @@ def generate_report_file(
         file_size = os.path.getsize(file_path)
         
         # 메타데이터 파일 생성
-        metadata_file = _generate_metadata_file(base_filename, metadata, analysis_results)
+        metadata_file = _generate_metadata_file(base_filename, metadata, analysis_results, additional_files)
         
         if metadata_file:
             additional_files.append(metadata_file)
@@ -404,7 +405,7 @@ def _generate_html_report(
                 <p><strong>유형:</strong> {viz['type']} | <strong>분석 유형:</strong> {viz.get('chart_type', '일반')}</p>
                 <p><strong>설명:</strong> {viz['description']}</p>
                 <div class="chart-container">
-                    <img src="{chart_image_src}" alt="{viz['title']}" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <img src="{chart_image_src}" alt="{viz['title']}" style="max-width: 600px; width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                     <p class="chart-note" style="display: none; color: #e74c3c; font-style: italic;">⚠️ 차트 이미지를 로드할 수 없습니다: {chart_image_src}</p>
                     <p class="chart-note">📊 {viz['title']} - {viz['type']} 차트</p>
                 </div>
@@ -663,7 +664,8 @@ def _markdown_to_text(markdown_content: str) -> str:
 def _generate_metadata_file(
     base_filename: str, 
     metadata: Dict[str, Any], 
-    analysis_results: Dict[str, Any]
+    analysis_results: Dict[str, Any],
+    generated_files: List[str] = None
 ) -> Optional[str]:
     """메타데이터 파일을 생성합니다."""
     try:
@@ -677,7 +679,8 @@ def _generate_metadata_file(
             },
             "user_requirements": metadata.get("user_requirements", {}),
             "analysis_results": analysis_results,
-            "metadata": metadata
+            "metadata": metadata,
+            "generated_files": generated_files or []
         }
         
         metadata_file_path = str(REPORTS_DIR / f"{base_filename}_metadata.json")
