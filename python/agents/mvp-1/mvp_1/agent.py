@@ -60,7 +60,7 @@ def query_generation_agent() -> Agent:
         sub_agents=sub_agents,
         instruction=QUERY_GENERATION_PROMPT,
         name="query_generation_agent",
-        description="사용자 데이터를 분석하여 최적의 분석 질의 생성을 위한 5단계 질의를 자동 생성하고, 동적 리포트를 생성하는 통합 에이전트"
+        description="사용자 데이터를 분석하여 질의를 생성하고 리포트를 생성합니다"
     )
     
     return agent

@@ -51,7 +51,7 @@ def dynamic_report_generation_agent() -> Agent:
         tools=tools,
         instruction=DYNAMIC_REPORT_GENERATION_PROMPT,
         name="dynamic_report_generation_agent",
-        description="데이터 특성과 사용자 요청에 따라 동적으로 맞춤형 리포트를 생성하고, 반드시 분석 목적에 맞는 차트, 테이블, 시각화 요소를 포함하여 실제 파일로 저장하는 전용 에이전트 (시각화와 파일 생성 필수)"
+        description="데이터를 분석하여 맞춤형 리포트를 생성합니다"
     )
     
     return agent

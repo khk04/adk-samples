@@ -82,12 +82,40 @@ def generate_report_file(
         chart_image_files = []  # 차트 이미지 파일 경로 초기화
         additional_files = []  # 추가 파일 목록 초기화
         
+        # data_file_path가 없으면 자동으로 설정
+        if not data_file_path:
+            # user_requirements에서 데이터 파일 경로 추출 시도
+            data_file_path = user_requirements.get('data_file_path', '') if user_requirements else ''
+            
+            # 여전히 없으면 기본 vdata 디렉토리에서 파일 찾기
+            if not data_file_path:
+                import os
+                from pathlib import Path
+                vdata_dir = Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/vdata")
+                if vdata_dir.exists():
+                    csv_files = list(vdata_dir.glob("*.csv"))
+                    if csv_files:
+                        data_file_path = str(csv_files[0])  # 첫 번째 CSV 파일 사용
+                        print(f"자동으로 데이터 파일 설정: {data_file_path}")
+        
+        # 시각화 생성 조건 확인 및 로깅
+        print(f"시각화 생성 조건 확인:")
+        print(f"  - include_visualizations: {include_visualizations}")
+        print(f"  - data_file_path: {data_file_path}")
+        print(f"  - output_format: {output_format}")
+        
         if include_visualizations and data_file_path:
             try:
+                print(f"시각화 생성 시작: {data_file_path}")
                 # VisualizationGeneratorTool의 execute는 FunctionTool이므로 직접 호출
                 from .visualization_generator_tool import generate_dynamic_visualizations
                 domain_type = user_requirements.get('domain', '일반')
                 analysis_purpose = user_requirements.get('analysis_purpose', '일반 분석')
+                
+                print(f"시각화 도구 호출 파라미터:")
+                print(f"  - domain_type: {domain_type}")
+                print(f"  - analysis_purpose: {analysis_purpose}")
+                print(f"  - output_format: {output_format}")
                 
                 viz_result = generate_dynamic_visualizations(
                     data_file_path=data_file_path,
@@ -134,6 +162,15 @@ def generate_report_file(
                 print(f"시각화 생성 중 오류 (무시하고 계속): {e}")
                 # 오류 발생 시에도 변수 초기화
                 chart_image_files = []
+        else:
+            print(f"시각화 생성 조건 미충족:")
+            print(f"  - include_visualizations: {include_visualizations}")
+            print(f"  - data_file_path: {data_file_path}")
+            if not include_visualizations:
+                print("  → include_visualizations가 False입니다.")
+            if not data_file_path:
+                print("  → data_file_path가 비어있습니다.")
+        
         
         # reports 디렉토리 생성 (config.py의 REPORTS_DIR 사용)
         reports_dir = _create_reports_directory()
@@ -698,18 +735,29 @@ def _markdown_to_html(markdown_content: str) -> str:
     """간단한 마크다운을 HTML로 변환합니다."""
     html = markdown_content
     
-    # 헤더 변환
-    html = html.replace('### ', '<h3>').replace('\n# ', '\n<h1>').replace('\n## ', '\n<h2>')
-    html = html.replace('\n### ', '\n<h3>')
+    # 헤더 변환 (닫는 태그 추가)
+    html = html.replace('\n# ', '\n<h1>').replace('\n## ', '\n<h2>').replace('\n### ', '\n<h3>')
+    html = html.replace('\n<h1>', '\n<h1>').replace('\n<h2>', '\n<h2>').replace('\n<h3>', '\n<h3>')
     
-    # 굵은 글씨
-    html = html.replace('**', '<strong>').replace('**', '</strong>')
+    # 헤더 닫는 태그 추가 (줄바꿈 전에)
+    html = html.replace('<h1>', '<h1>').replace('<h2>', '<h2>').replace('<h3>', '<h3>')
+    html = html.replace('<h1><br>', '<h1>').replace('<h2><br>', '<h2>').replace('<h3><br>', '<h3>')
+    html = html.replace('<h1>', '<h1>').replace('<h2>', '<h2>').replace('<h3>', '<h3>')
     
-    # 기울임체
-    html = html.replace('*', '<em>').replace('*', '</em>')
+    # 굵은 글씨 변환 (더 정확한 방법)
+    import re
+    html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html)
+    
+    # 기울임체 변환 (더 정확한 방법)
+    html = re.sub(r'\*(.*?)\*', r'<em>\1</em>', html)
     
     # 줄바꿈
     html = html.replace('\n', '<br>\n')
+    
+    # 헤더 닫는 태그 추가
+    html = re.sub(r'<h1>(.*?)<br>', r'<h1>\1</h1><br>', html)
+    html = re.sub(r'<h2>(.*?)<br>', r'<h2>\1</h2><br>', html)
+    html = re.sub(r'<h3>(.*?)<br>', r'<h3>\1</h3><br>', html)
     
     return html
 
@@ -765,7 +813,7 @@ def _generate_metadata_file(
 class ReportFileGeneratorTool:
     def __init__(self):
         self.name = "generate_report_file"
-        self.description = "분석 결과를 바탕으로 실제 리포트 파일을 생성하여 reports 디렉토리에 저장합니다. 마크다운, HTML, 텍스트 형식을 지원합니다."
+        self.description = "분석 결과를 바탕으로 실제 리포트 파일을 생성하여 reports 디렉토리에 저장합니다. 마크다운, HTML(실제 차트 이미지 포함), 텍스트 형식을 지원합니다."
         self.input_model = ReportFileGeneratorInput
         self.output_model = ReportFileGeneratorOutput
         self.execute = generate_report_file
