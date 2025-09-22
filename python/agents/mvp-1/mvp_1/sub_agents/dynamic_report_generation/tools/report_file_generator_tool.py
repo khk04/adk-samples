@@ -172,35 +172,42 @@ def generate_report_file(
                 print("  → data_file_path가 비어있습니다.")
         
         
-        # reports 디렉토리 생성 (config.py의 REPORTS_DIR 사용)
-        reports_dir = _create_reports_directory()
-        
-        # 파일명 생성 (타임스탬프 포함)
+        # 리포트별 디렉토리 생성
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_title = _sanitize_filename(report_title)
-        base_filename = f"{safe_title}_{timestamp}"
+        report_dir_name = f"{safe_title}_{timestamp}"
+        report_dir = REPORTS_DIR / report_dir_name
+        
+        # 리포트 디렉토리 및 하위 디렉토리 생성
+        report_dir.mkdir(parents=True, exist_ok=True)
+        charts_dir = report_dir / "charts"
+        charts_dir.mkdir(exist_ok=True)
+        data_dir = report_dir / "data"
+        data_dir.mkdir(exist_ok=True)
+        
+        print(f"리포트 디렉토리 생성: {report_dir}")
         
         # 출력 형식에 따른 파일 생성 (시각화 요소 포함)
         if output_format.lower() == "html":
             file_content = _generate_html_report(
-                report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data, chart_image_files
+                report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data, chart_image_files, charts_dir
             )
-            file_path = str(REPORTS_DIR / f"{base_filename}.html")
+            file_path = str(report_dir / "index.html")
             
-            # HTML 파일의 경우 차트 이미지 파일들을 같은 디렉토리로 복사
+            # HTML 파일의 경우 차트 이미지 파일들을 charts 디렉토리로 복사
             if chart_image_files:
-                _copy_chart_images_to_reports_dir(chart_image_files, REPORTS_DIR)
+                _copy_chart_images_to_charts_dir(chart_image_files, charts_dir)
                 print(f"차트 이미지 파일들 복사 완료: {chart_image_files}")
         elif output_format.lower() == "txt":
             file_content = _generate_text_report(
                 report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data
             )
-            file_path = str(REPORTS_DIR / f"{base_filename}.txt")
+            file_path = str(report_dir / "report.txt")
         else:  # 기본값: markdown
             file_content = _generate_markdown_report(
                 report_title, report_content, user_requirements, analysis_results, metadata, visualizations, charts_data, tables_data
             )
-            file_path = str(REPORTS_DIR / f"{base_filename}.md")
+            file_path = str(report_dir / "report.md")
         
         # 파일 저장
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -209,8 +216,8 @@ def generate_report_file(
         # 파일 크기 확인
         file_size = os.path.getsize(file_path)
         
-        # 메타데이터 파일 생성
-        metadata_file = _generate_metadata_file(base_filename, metadata, analysis_results, additional_files)
+        # 메타데이터 파일 생성 (data 디렉토리에 저장)
+        metadata_file = _generate_metadata_file(report_dir_name, metadata, analysis_results, additional_files, data_dir)
         
         if metadata_file:
             additional_files.append(metadata_file)
@@ -252,8 +259,30 @@ def _create_reports_directory() -> str:
     return reports_dir
 
 
+def _copy_chart_images_to_charts_dir(chart_image_files: List[str], charts_dir: Path) -> None:
+    """차트 이미지 파일들을 charts 디렉토리로 복사하고 표준화된 이름으로 저장합니다."""
+    try:
+        print(f"차트 이미지 복사 시작: {len(chart_image_files)}개 파일")
+        for i, image_file in enumerate(chart_image_files):
+            if os.path.exists(image_file):
+                # 표준화된 파일명으로 저장 (chart_0.png, chart_1.png, ...)
+                standard_filename = f"chart_{i}.png"
+                destination = charts_dir / standard_filename
+                
+                # 파일이 이미 존재하지 않는 경우에만 복사
+                if not destination.exists():
+                    shutil.copy2(image_file, destination)
+                    print(f"차트 이미지 복사 완료: {image_file} -> {destination}")
+                else:
+                    print(f"차트 이미지 이미 존재: {destination}")
+            else:
+                print(f"차트 이미지 파일이 존재하지 않음: {image_file}")
+        print(f"차트 이미지 복사 완료: {len(chart_image_files)}개 파일 처리")
+    except Exception as e:
+        print(f"차트 이미지 복사 중 오류: {e}")
+
 def _copy_chart_images_to_reports_dir(chart_image_files: List[str], reports_dir: Path) -> None:
-    """차트 이미지 파일들을 reports 디렉토리로 복사합니다."""
+    """차트 이미지 파일들을 reports 디렉토리로 복사합니다. (기존 호환성 유지)"""
     try:
         print(f"차트 이미지 복사 시작: {len(chart_image_files)}개 파일")
         for image_file in chart_image_files:
@@ -438,7 +467,8 @@ def _generate_html_report(
     visualizations: List[Dict[str, Any]] = None,
     charts_data: Dict[str, Any] = None,
     tables_data: Dict[str, Any] = None,
-    chart_image_files: List[str] = None
+    chart_image_files: List[str] = None,
+    charts_dir: Path = None
 ) -> str:
     """HTML 형식의 리포트를 생성합니다."""
     
@@ -451,8 +481,8 @@ def _generate_html_report(
     if chart_image_files is None:
         chart_image_files = []
     
-    # 마크다운을 HTML로 변환하는 간단한 함수
-    html_content = _markdown_to_html(content)
+    # 마크다운을 HTML로 변환하는 간단한 함수 (차트 이미지 파일명 매핑 포함)
+    html_content = _markdown_to_html(content, chart_image_files, charts_dir)
     
     # 시각화 요소 HTML 생성 (더 친화적으로)
     viz_html = ""
@@ -476,25 +506,38 @@ def _generate_html_report(
                 chart_image_path = Path(chart_image_files[i-1])
                 chart_image_name = chart_image_path.name
                 
-                # 실제 PNG 파일 경로 사용 (Base64 인코딩 대신)
-                try:
-                    if chart_image_path.exists():
-                        # 상대 경로 사용 (HTML 파일과 같은 디렉토리에 있으므로)
+                # 새로운 디렉토리 구조에 맞게 이미지 경로 설정
+                if charts_dir:
+                    # 표준화된 파일명 사용
+                    standard_filename = f"chart_{i-1}.png"
+                    chart_image_src = f"./charts/{standard_filename}"
+                    chart_image_name = standard_filename
+                    print(f"차트 {i} 새로운 디렉토리 구조 사용: {chart_image_src}")
+                else:
+                    # 기존 방식 (하위 호환성)
+                    try:
+                        if chart_image_path.exists():
+                            # 상대 경로 사용 (HTML 파일과 같은 디렉토리에 있으므로)
+                            chart_image_src = chart_image_name
+                            print(f"차트 {i} 이미지 상대 경로 사용: {chart_image_src}")
+                        else:
+                            # 파일이 없으면 절대 경로로 시도
+                            chart_image_src = f"file://{chart_image_path.absolute()}"
+                            print(f"차트 {i} 이미지 파일 없음, 절대 경로 사용: {chart_image_src}")
+                    except Exception as e:
+                        # 파일 경로 설정 실패 시 기본값 사용
                         chart_image_src = chart_image_name
-                        print(f"차트 {i} 이미지 상대 경로 사용: {chart_image_src}")
-                    else:
-                        # 파일이 없으면 절대 경로로 시도
-                        chart_image_src = f"file://{chart_image_path.absolute()}"
-                        print(f"차트 {i} 이미지 파일 없음, 절대 경로 사용: {chart_image_src}")
-                except Exception as e:
-                    # 파일 경로 설정 실패 시 기본값 사용
-                    chart_image_src = chart_image_name
-                    print(f"차트 {i} 파일 경로 설정 실패, 기본값 사용: {e}")
+                        print(f"차트 {i} 파일 경로 설정 실패, 기본값 사용: {e}")
             else:
-                # 기본 패턴도 상대 경로 사용
-                chart_image_src = f"chart_{i-1}.png"
-                chart_image_name = f"chart_{i-1}.png"
-                print(f"차트 {i} 기본 상대 경로 사용: {chart_image_src}")
+                # 기본 패턴
+                if charts_dir:
+                    chart_image_src = f"./charts/chart_{i-1}.png"
+                    chart_image_name = f"chart_{i-1}.png"
+                    print(f"차트 {i} 기본 새로운 디렉토리 구조 사용: {chart_image_src}")
+                else:
+                    chart_image_src = f"chart_{i-1}.png"
+                    chart_image_name = f"chart_{i-1}.png"
+                    print(f"차트 {i} 기본 상대 경로 사용: {chart_image_src}")
             
             viz_html += f"""
             <div class="visualization-item">
@@ -752,9 +795,45 @@ def _generate_text_report(
     return text_report
 
 
-def _markdown_to_html(markdown_content: str) -> str:
+def _markdown_to_html(markdown_content: str, chart_image_files: List[str] = None, charts_dir: Path = None) -> str:
     """간단한 마크다운을 HTML로 변환합니다."""
     html = markdown_content
+    
+    # 차트 이미지 파일명 매핑 (새로운 디렉토리 구조에 맞게)
+    if chart_image_files and charts_dir:
+        for i, image_file in enumerate(chart_image_files):
+            if i < 5:  # 최대 5개 차트만 처리
+                # 새로운 디렉토리 구조에서는 표준화된 파일명 사용
+                standard_filename = f"chart_{i}.png"
+                charts_path = f"./charts/{standard_filename}"
+                
+                # 다양한 패턴 매핑 (하드코딩된 패턴들)
+                patterns_to_replace = [
+                    f"./chart_{i+1}.png",
+                    f"chart_{i+1}.png", 
+                    f"./chart_{i}.png",
+                    f"chart_{i}.png"
+                ]
+                for old_pattern in patterns_to_replace:
+                    if old_pattern in html:
+                        html = html.replace(old_pattern, charts_path)
+                        print(f"이미지 경로 매핑: {old_pattern} -> {charts_path}")
+    elif chart_image_files:
+        # 기존 방식 (하위 호환성)
+        for i, image_file in enumerate(chart_image_files):
+            if i < 5:  # 최대 5개 차트만 처리
+                actual_filename = Path(image_file).name
+                # 다양한 패턴 매핑 (하드코딩된 패턴들)
+                patterns_to_replace = [
+                    f"./chart_{i+1}.png",
+                    f"chart_{i+1}.png", 
+                    f"./chart_{i}.png",
+                    f"chart_{i}.png"
+                ]
+                for old_pattern in patterns_to_replace:
+                    if old_pattern in html:
+                        html = html.replace(old_pattern, actual_filename)
+                        print(f"이미지 경로 매핑: {old_pattern} -> {actual_filename}")
     
     # 헤더 변환 (닫는 태그 추가)
     html = html.replace('\n# ', '\n<h1>').replace('\n## ', '\n<h2>').replace('\n### ', '\n<h3>')
@@ -798,10 +877,11 @@ def _markdown_to_text(markdown_content: str) -> str:
 
 
 def _generate_metadata_file(
-    base_filename: str, 
+    report_dir_name: str, 
     metadata: Dict[str, Any], 
     analysis_results: Dict[str, Any],
-    generated_files: List[str] = None
+    generated_files: List[str] = None,
+    data_dir: Path = None
 ) -> Optional[str]:
     """메타데이터 파일을 생성합니다."""
     try:
@@ -810,16 +890,27 @@ def _generate_metadata_file(
                 "title": metadata.get("title", "분석 리포트"),
                 "generated_at": datetime.now().isoformat(),
                 "generator": "Dynamic Report Generation Agent",
-                "version": "1.0",
-                "storage_location": str(REPORTS_DIR)
+                "version": "2.0",
+                "storage_location": str(REPORTS_DIR),
+                "report_directory": report_dir_name,
+                "directory_structure": {
+                    "index_file": "index.html",
+                    "charts_directory": "charts/",
+                    "data_directory": "data/",
+                    "assets_directory": "assets/"
+                }
             },
             "user_requirements": metadata.get("user_requirements", {}),
             "analysis_results": analysis_results,
             "metadata": metadata,
-            "generated_files": generated_files or []
+            "generated_files": generated_files or [],
+            "chart_files": [f"chart_{i}.png" for i in range(5)]  # 표준화된 차트 파일명
         }
         
-        metadata_file_path = str(REPORTS_DIR / f"{base_filename}_metadata.json")
+        if data_dir:
+            metadata_file_path = str(data_dir / "metadata.json")
+        else:
+            metadata_file_path = str(REPORTS_DIR / f"{report_dir_name}_metadata.json")
         
         with open(metadata_file_path, 'w', encoding='utf-8') as f:
             json.dump(metadata_content, f, ensure_ascii=False, indent=2)
