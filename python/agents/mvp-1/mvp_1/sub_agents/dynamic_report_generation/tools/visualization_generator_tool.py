@@ -99,6 +99,7 @@ class VisualizationInput(BaseModel):
     analysis_results: Dict[str, Any] = Field(..., description="분석 결과")
     visualization_requirements: Dict[str, Any] = Field(default_factory=dict, description="시각화 요구사항")
     output_format: str = Field(default="html", description="출력 형식 (html, markdown, json)")
+    target_dir: Optional[str] = Field(default=None, description="이미지 저장 대상 디렉토리 경로")
 
 
 class VisualizationOutput(BaseModel):
@@ -117,7 +118,8 @@ def generate_dynamic_visualizations(
     analysis_purpose: str,
     analysis_results: Dict[str, Any],
     visualization_requirements: Dict[str, Any] = {},
-    output_format: str = "html"
+    output_format: str = "html",
+    target_dir: Optional[str] = None
 ) -> VisualizationOutput:
     """
     분석 목적과 데이터 특성에 따라 동적으로 시각화 요소를 생성합니다.
@@ -178,7 +180,7 @@ def generate_dynamic_visualizations(
         
         # 파일 생성 (필요시)
         if output_format in ["html", "json"]:
-            generated_files = _save_visualization_files(visualizations, charts_data, tables_data, output_format, data_file_path)
+            generated_files = _save_visualization_files(visualizations, charts_data, tables_data, output_format, data_file_path, target_dir)
         
         return VisualizationOutput(
             visualizations=visualizations,
@@ -843,7 +845,7 @@ def _generate_tables_data(df: pd.DataFrame, domain_type: str, analysis_purpose: 
     return tables_data
 
 
-def _save_visualization_files(visualizations: List[Dict[str, Any]], charts_data: Dict[str, Any], tables_data: Dict[str, Any], output_format: str, data_file_path: str = None) -> List[str]:
+def _save_visualization_files(visualizations: List[Dict[str, Any]], charts_data: Dict[str, Any], tables_data: Dict[str, Any], output_format: str, data_file_path: str = None, target_dir: str = None) -> List[str]:
     """시각화 파일을 저장합니다."""
     generated_files = []
     
@@ -859,7 +861,7 @@ def _save_visualization_files(visualizations: List[Dict[str, Any]], charts_data:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # 실제 차트 이미지 생성
-        chart_images = _create_actual_charts(visualizations, charts_data, data_file_path)
+        chart_images = _create_actual_charts(visualizations, charts_data, data_file_path, target_dir)
         generated_files.extend(chart_images)
         
         if output_format == "html":
@@ -883,7 +885,7 @@ def _save_visualization_files(visualizations: List[Dict[str, Any]], charts_data:
     return generated_files
 
 
-def _create_actual_charts(visualizations: List[Dict[str, Any]], charts_data: Dict[str, Any], data_file_path: str = None) -> List[str]:
+def _create_actual_charts(visualizations: List[Dict[str, Any]], charts_data: Dict[str, Any], data_file_path: str = None, target_dir: str = None) -> List[str]:
     """실제 차트 이미지를 생성합니다."""
     generated_images = []
     
@@ -920,20 +922,20 @@ def _create_actual_charts(visualizations: List[Dict[str, Any]], charts_data: Dic
                 print(f"\n차트 {i+1} 생성 시도: {title} ({chart_type})")
                 
                 if chart_type == 'bar_chart':
-                    image_path = _create_bar_chart(viz, title, timestamp, i, df)
+                    image_path = _create_bar_chart(viz, title, timestamp, i, df, target_dir)
                 elif chart_type == 'line_chart':
-                    image_path = _create_line_chart(viz, title, timestamp, i, df)
+                    image_path = _create_line_chart(viz, title, timestamp, i, df, target_dir)
                 elif chart_type == 'pie_chart':
-                    image_path = _create_pie_chart(viz, title, timestamp, i, df)
+                    image_path = _create_pie_chart(viz, title, timestamp, i, df, target_dir)
                 elif chart_type == 'histogram':
-                    image_path = _create_histogram(viz, title, timestamp, i, df)
+                    image_path = _create_histogram(viz, title, timestamp, i, df, target_dir)
                 elif chart_type == 'scatter_plot':
-                    image_path = _create_scatter_plot(viz, title, timestamp, i, df)
+                    image_path = _create_scatter_plot(viz, title, timestamp, i, df, target_dir)
                 elif chart_type == 'box_plot':
-                    image_path = _create_box_plot(viz, title, timestamp, i, df)
+                    image_path = _create_box_plot(viz, title, timestamp, i, df, target_dir)
                 else:
                     print(f"지원하지 않는 차트 유형: {chart_type}, 기본 막대 차트로 생성")
-                    image_path = _create_bar_chart(viz, title, timestamp, i, df)  # 기본값
+                    image_path = _create_bar_chart(viz, title, timestamp, i, df, target_dir)  # 기본값
                 
                 if image_path and os.path.exists(image_path):
                     generated_images.append(image_path)
@@ -953,7 +955,7 @@ def _create_actual_charts(visualizations: List[Dict[str, Any]], charts_data: Dic
     return generated_images
 
 
-def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None) -> str:
+def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None, target_dir: str = None) -> str:
     """막대 차트를 생성합니다."""
     try:
         print(f"막대 차트 생성 시작: {title}")
@@ -992,7 +994,10 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
                 plt.tight_layout()
                 
                 # 공통 이미지 저장 함수 사용
-                image_path = save_chart_image(plt.gcf(), timestamp, index, "bar_chart")
+                target_path = Path(target_dir) if target_dir else None
+                fig = plt.gcf()
+                image_path = save_chart_image(fig, timestamp, index, "bar_chart", target_dir=target_path)
+                plt.close(fig)
                 return image_path
                 
             except Exception as e:
@@ -1020,7 +1025,10 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
         plt.tight_layout()
         
         # 공통 이미지 저장 함수 사용
-        image_path = save_chart_image(plt.gcf(), timestamp, index, "bar_chart_sample")
+        target_path = Path(target_dir) if target_dir else None
+        fig = plt.gcf()
+        image_path = save_chart_image(fig, timestamp, index, "bar_chart_sample", target_dir=target_path)
+        plt.close(fig)
         return image_path
         
     except Exception as e:
@@ -1029,7 +1037,7 @@ def _create_bar_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
         return None
 
 
-def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None) -> str:
+def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None, target_dir: str = None) -> str:
     """선형 차트를 생성합니다."""
     try:
         # viz_config에서 실제 데이터 정보 추출
@@ -1064,7 +1072,10 @@ def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, i
                 plt.tight_layout()
                 
                 # 공통 이미지 저장 함수 사용
-                image_path = save_chart_image(plt.gcf(), timestamp, index, "line_chart")
+                target_path = Path(target_dir) if target_dir else None
+                fig = plt.gcf()
+                image_path = save_chart_image(fig, timestamp, index, "line_chart", target_dir=target_path)
+                plt.close(fig)
                 return image_path
                 
             except Exception as e:
@@ -1088,7 +1099,10 @@ def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, i
         plt.tight_layout()
         
         # 공통 이미지 저장 함수 사용
-        image_path = save_chart_image(plt.gcf(), timestamp, index, "line_chart_sample")
+        target_path = Path(target_dir) if target_dir else None
+        fig = plt.gcf()
+        image_path = save_chart_image(fig, timestamp, index, "line_chart_sample", target_dir=target_path)
+        plt.close(fig)
         return image_path
         
     except Exception as e:
@@ -1097,7 +1111,7 @@ def _create_line_chart(viz_config: Dict[str, Any], title: str, timestamp: str, i
         return None
 
 
-def _create_pie_chart(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None) -> str:
+def _create_pie_chart(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None, target_dir: str = None) -> str:
     """파이 차트를 생성합니다."""
     try:
         # viz_config에서 실제 데이터 정보 추출
@@ -1137,7 +1151,10 @@ def _create_pie_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
                 plt.axis('equal')
                 
                 # 공통 이미지 저장 함수 사용
-                image_path = save_chart_image(plt.gcf(), timestamp, index, "pie_chart")
+                target_path = Path(target_dir) if target_dir else None
+                fig = plt.gcf()
+                image_path = save_chart_image(fig, timestamp, index, "pie_chart", target_dir=target_path)
+                plt.close(fig)
                 return image_path
                 
             except Exception as e:
@@ -1163,7 +1180,10 @@ def _create_pie_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
         plt.axis('equal')
         
         # 공통 이미지 저장 함수 사용
-        image_path = save_chart_image(plt.gcf(), timestamp, index, "pie_chart_sample")
+        target_path = Path(target_dir) if target_dir else None
+        fig = plt.gcf()
+        image_path = save_chart_image(fig, timestamp, index, "pie_chart_sample", target_dir=target_path)
+        plt.close(fig)
         return image_path
         
     except Exception as e:
@@ -1172,7 +1192,7 @@ def _create_pie_chart(viz_config: Dict[str, Any], title: str, timestamp: str, in
         return None
 
 
-def _create_histogram(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None) -> str:
+def _create_histogram(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None, target_dir: str = None) -> str:
     """히스토그램을 생성합니다."""
     try:
         # viz_config에서 실제 데이터 정보 추출
@@ -1200,7 +1220,10 @@ def _create_histogram(viz_config: Dict[str, Any], title: str, timestamp: str, in
                     plt.tight_layout()
                     
                     # 공통 이미지 저장 함수 사용
-                    image_path = save_chart_image(plt.gcf(), timestamp, index, "histogram")
+                    target_path = Path(target_dir) if target_dir else None
+                    fig = plt.gcf()
+                    image_path = save_chart_image(fig, timestamp, index, "histogram", target_dir=target_path)
+                    plt.close(fig)
                     return image_path
                 else:
                     print(f"히스토그램용 데이터가 없음: {column}")
@@ -1224,7 +1247,10 @@ def _create_histogram(viz_config: Dict[str, Any], title: str, timestamp: str, in
         plt.tight_layout()
         
         # 공통 이미지 저장 함수 사용
-        image_path = save_chart_image(plt.gcf(), timestamp, index, "histogram_sample")
+        target_path = Path(target_dir) if target_dir else None
+        fig = plt.gcf()
+        image_path = save_chart_image(fig, timestamp, index, "histogram_sample", target_dir=target_path)
+        plt.close(fig)
         return image_path
         
     except Exception as e:
@@ -1233,7 +1259,7 @@ def _create_histogram(viz_config: Dict[str, Any], title: str, timestamp: str, in
         return None
 
 
-def _create_scatter_plot(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None) -> str:
+def _create_scatter_plot(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None, target_dir: str = None) -> str:
     """산점도를 생성합니다."""
     try:
         # viz_config에서 실제 데이터 정보 추출
@@ -1268,7 +1294,10 @@ def _create_scatter_plot(viz_config: Dict[str, Any], title: str, timestamp: str,
                     plt.tight_layout()
                     
                     # 공통 이미지 저장 함수 사용
-                    image_path = save_chart_image(plt.gcf(), timestamp, index, "scatter_plot")
+                    target_path = Path(target_dir) if target_dir else None
+                    fig = plt.gcf()
+                    image_path = save_chart_image(fig, timestamp, index, "scatter_plot", target_dir=target_path)
+                    plt.close(fig)
                     return image_path
                 else:
                     print(f"산점도용 데이터가 없음: {x_column}, {y_column}")
@@ -1294,7 +1323,10 @@ def _create_scatter_plot(viz_config: Dict[str, Any], title: str, timestamp: str,
         plt.tight_layout()
         
         # 공통 이미지 저장 함수 사용
-        image_path = save_chart_image(plt.gcf(), timestamp, index, "scatter_plot_sample")
+        target_path = Path(target_dir) if target_dir else None
+        fig = plt.gcf()
+        image_path = save_chart_image(fig, timestamp, index, "scatter_plot_sample", target_dir=target_path)
+        plt.close(fig)
         return image_path
         
     except Exception as e:
@@ -1303,7 +1335,7 @@ def _create_scatter_plot(viz_config: Dict[str, Any], title: str, timestamp: str,
         return None
 
 
-def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None) -> str:
+def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, index: int, df: pd.DataFrame = None, target_dir: str = None) -> str:
     """박스 플롯을 생성합니다."""
     try:
         # viz_config에서 실제 데이터 정보 추출
@@ -1347,7 +1379,10 @@ def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, ind
                         plt.tight_layout()
                         
                         # 공통 이미지 저장 함수 사용
-                        image_path = save_chart_image(plt.gcf(), timestamp, index, "box_plot")
+                        target_path = Path(target_dir) if target_dir else None
+                        fig = plt.gcf()
+                        image_path = save_chart_image(fig, timestamp, index, "box_plot", target_dir=target_path)
+                        plt.close(fig)
                         return image_path
                 
                 # 방법 2: 여러 수치형 컬럼이 있는 경우
@@ -1382,7 +1417,10 @@ def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, ind
                             plt.tight_layout()
                             
                             # 공통 이미지 저장 함수 사용
-                            image_path = save_chart_image(plt.gcf(), timestamp, index, "box_plot_multi")
+                            target_path = Path(target_dir) if target_dir else None
+                            fig = plt.gcf()
+                            image_path = save_chart_image(fig, timestamp, index, "box_plot_multi", target_dir=target_path)
+                            plt.close(fig)
                             return image_path
                 
             except Exception as e:
@@ -1412,7 +1450,10 @@ def _create_box_plot(viz_config: Dict[str, Any], title: str, timestamp: str, ind
         plt.tight_layout()
         
         # 공통 이미지 저장 함수 사용
-        image_path = save_chart_image(plt.gcf(), timestamp, index, "box_plot_sample")
+        target_path = Path(target_dir) if target_dir else None
+        fig = plt.gcf()
+        image_path = save_chart_image(fig, timestamp, index, "box_plot_sample", target_dir=target_path)
+        plt.close(fig)
         return image_path
         
     except Exception as e:

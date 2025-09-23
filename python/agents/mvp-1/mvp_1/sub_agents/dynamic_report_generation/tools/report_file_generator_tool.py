@@ -90,14 +90,27 @@ def generate_report_file(
             
             # 여전히 없으면 기본 vdata 디렉토리에서 파일 찾기
             if not data_file_path:
-                import os
-                from pathlib import Path
                 vdata_dir = Path("/Users/khk/work/connev/adk-samples/python/agents/mvp-1/data/vdata")
                 if vdata_dir.exists():
                     csv_files = list(vdata_dir.glob("*.csv"))
                     if csv_files:
                         data_file_path = str(csv_files[0])  # 첫 번째 CSV 파일 사용
                         print(f"자동으로 데이터 파일 설정: {data_file_path}")
+        
+        # 리포트별 디렉토리 생성 (시각화 생성 전에 먼저 생성)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_title = _sanitize_filename(report_title)
+        report_dir_name = f"{safe_title}_{timestamp}"
+        report_dir = REPORTS_DIR / report_dir_name
+        
+        # 리포트 디렉토리 및 하위 디렉토리 생성
+        report_dir.mkdir(parents=True, exist_ok=True)
+        charts_dir = report_dir / "charts"
+        charts_dir.mkdir(exist_ok=True)
+        data_dir = report_dir / "data"
+        data_dir.mkdir(exist_ok=True)
+        
+        print(f"리포트 디렉토리 생성: {report_dir}")
         
         # 시각화 생성 조건 확인 및 로깅
         print(f"시각화 생성 조건 확인:")
@@ -117,6 +130,7 @@ def generate_report_file(
                 print(f"  - domain_type: {domain_type}")
                 print(f"  - analysis_purpose: {analysis_purpose}")
                 print(f"  - output_format: {output_format}")
+                print(f"  - target_dir: {str(charts_dir)}")
                 
                 viz_result = generate_dynamic_visualizations(
                     data_file_path=data_file_path,
@@ -124,7 +138,8 @@ def generate_report_file(
                     analysis_purpose=analysis_purpose,
                     analysis_results=analysis_results,
                     visualization_requirements={},
-                    output_format=output_format
+                    output_format=output_format,
+                    target_dir=str(charts_dir)
                 )
                 
                 if viz_result.success:
@@ -172,21 +187,7 @@ def generate_report_file(
             if not data_file_path:
                 print("  → data_file_path가 비어있습니다.")
         
-        
-        # 리포트별 디렉토리 생성
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_title = _sanitize_filename(report_title)
-        report_dir_name = f"{safe_title}_{timestamp}"
-        report_dir = REPORTS_DIR / report_dir_name
-        
-        # 리포트 디렉토리 및 하위 디렉토리 생성
-        report_dir.mkdir(parents=True, exist_ok=True)
-        charts_dir = report_dir / "charts"
-        charts_dir.mkdir(exist_ok=True)
-        data_dir = report_dir / "data"
-        data_dir.mkdir(exist_ok=True)
-        
-        print(f"리포트 디렉토리 생성: {report_dir}")
+        # 리포트별 디렉토리는 이미 위에서 생성됨
         
         # 출력 형식에 따른 파일 생성 (시각화 요소 포함)
         if output_format.lower() == "html":

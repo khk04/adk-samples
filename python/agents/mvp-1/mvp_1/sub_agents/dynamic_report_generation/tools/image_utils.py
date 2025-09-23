@@ -72,9 +72,7 @@ def save_chart_image(
     except Exception as e:
         print(f"차트 이미지 저장 실패: {e}")
         return None
-    finally:
-        # Figure 객체 정리
-        plt_figure.close()
+    # Figure 객체 정리는 호출하는 쪽에서 처리
 
 
 def copy_chart_images(
