@@ -28,10 +28,10 @@ export function WelcomeScreen({
         {/* Header section of the card */}
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold text-white flex items-center justify-center gap-3">
-            ✨ Gemini FullStack - ADK 🚀
+            🤖 MVP-1 Gemini - 데이터 분석 에이전트 📊
           </h1>
           <p className="text-lg text-neutral-300 max-w-md mx-auto">
-            Turns your questions into comprehensive reports!
+            사용자 데이터를 분석하여 맞춤형 리포트를 생성합니다!
           </p>
         </div>
 
@@ -45,7 +45,7 @@ export function WelcomeScreen({
                 onClick={onCancel}
                 className="text-red-400 hover:text-red-300 hover:bg-red-900/20 border-red-700/50" // Enhanced cancel button
               >
-                Cancel
+                취소
               </Button>
             </div>
           )}

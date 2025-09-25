@@ -163,16 +163,16 @@ export default function App() {
         finalReportWithCitations = parsed.actions.stateDelta.final_report_with_citations;
       }
 
-      // Extract website count from research agents
+      // Extract data analysis count from MVP-1 agents
       let sourceCount = 0;
-      if ((parsed.author === 'section_researcher' || parsed.author === 'enhanced_search_executor')) {
-        console.log('[SSE EXTRACT] Relevant agent for source count:', parsed.author); // DEBUG
-        if (parsed.actions?.stateDelta?.url_to_short_id) {
-          console.log('[SSE EXTRACT] url_to_short_id found:', parsed.actions.stateDelta.url_to_short_id); // DEBUG
-          sourceCount = Object.keys(parsed.actions.stateDelta.url_to_short_id).length;
+      if ((parsed.author === 'data_checker_agent' || parsed.author === 'report_generator_agent')) {
+        console.log('[SSE EXTRACT] Relevant agent for data count:', parsed.author); // DEBUG
+        if (parsed.actions?.stateDelta?.data_files_processed) {
+          console.log('[SSE EXTRACT] data_files_processed found:', parsed.actions.stateDelta.data_files_processed); // DEBUG
+          sourceCount = parsed.actions.stateDelta.data_files_processed;
           console.log('[SSE EXTRACT] Calculated sourceCount:', sourceCount); // DEBUG
         } else {
-          console.log('[SSE EXTRACT] url_to_short_id NOT found for agent:', parsed.author); // DEBUG
+          console.log('[SSE EXTRACT] data_files_processed NOT found for agent:', parsed.author); // DEBUG
         }
       }
 
@@ -195,27 +195,23 @@ export default function App() {
   // Define getEventTitle here or ensure it's in scope from where it's used
   const getEventTitle = (agentName: string): string => {
     switch (agentName) {
-      case "plan_generator":
-        return "Planning Research Strategy";
-      case "section_planner":
-        return "Structuring Report Outline";
-      case "section_researcher":
-        return "Initial Web Research";
-      case "research_evaluator":
-        return "Evaluating Research Quality";
-      case "EscalationChecker":
-        return "Quality Assessment";
-      case "enhanced_search_executor":
-        return "Enhanced Web Research";
-      case "research_pipeline":
-        return "Executing Research Pipeline";
-      case "iterative_refinement_loop":
-        return "Refining Research";
+      case "mvp_1_agent":
+        return "MVP-1 데이터 분석 에이전트";
+      case "data_checker_agent":
+        return "데이터 확인 및 검증";
+      case "report_generator_agent":
+        return "리포트 생성";
+      case "check_user_data_request":
+        return "사용자 요청 분석";
+      case "validate_data":
+        return "데이터 검증";
+      case "analyze_data":
+        return "데이터 분석";
       case "interactive_planner_agent":
       case "root_agent":
-        return "Interactive Planning";
+        return "데이터 분석 처리";
       default:
-        return `Processing (${agentName || 'Unknown Agent'})`;
+        return `처리 중 (${agentName || '알 수 없는 에이전트'})`;
     }
   };
 
@@ -223,7 +219,7 @@ export default function App() {
     const { textParts, agent, finalReportWithCitations, functionCall, functionResponse, sourceCount, sources } = extractDataFromSSE(jsonData);
 
     if (sourceCount > 0) {
-      console.log('[SSE HANDLER] Updating websiteCount. Current sourceCount:', sourceCount);
+      console.log('[SSE HANDLER] Updating dataFileCount. Current sourceCount:', sourceCount);
       setWebsiteCount(prev => Math.max(prev, sourceCount));
     }
 
@@ -269,13 +265,13 @@ export default function App() {
     }
 
     if (sources) {
-      console.log('[SSE HANDLER] Adding Retrieved Sources timeline event:', sources);
+      console.log('[SSE HANDLER] Adding Data Analysis Results timeline event:', sources);
       setMessageEvents(prev => new Map(prev).set(aiMessageId, [...(prev.get(aiMessageId) || []), {
-        title: "Retrieved Sources", data: { type: 'sources', content: sources }
+        title: "데이터 분석 결과", data: { type: 'sources', content: sources }
       }]));
     }
 
-    if (agent === "report_composer_with_citations" && finalReportWithCitations) {
+    if (agent === "report_generator_agent" && finalReportWithCitations) {
       const finalReportMessageId = Date.now().toString() + "_final";
       setMessages(prev => [...prev, { type: "ai", content: finalReportWithCitations as string, id: finalReportMessageId, agent: currentAgentRef.current, finalReportWithCitations: true }]);
       setDisplayData(finalReportWithCitations as string);
@@ -488,7 +484,7 @@ export default function App() {
         
         <div className="text-center space-y-6">
           <h1 className="text-4xl font-bold text-white flex items-center justify-center gap-3">
-            ✨ Gemini FullStack - ADK 🚀
+            🤖 MVP-1 Gemini - 데이터 분석 에이전트 📊
           </h1>
           
           <div className="flex flex-col items-center space-y-4">
@@ -500,10 +496,10 @@ export default function App() {
             
             <div className="space-y-2">
               <p className="text-xl text-neutral-300">
-                Waiting for backend to be ready...
+                백엔드 서버 준비 중...
               </p>
               <p className="text-sm text-neutral-400">
-                This may take a moment on first startup
+                첫 시작 시 시간이 걸릴 수 있습니다
               </p>
             </div>
             
@@ -528,15 +524,15 @@ export default function App() {
           ) : !isBackendReady ? (
             <div className="flex-1 flex flex-col items-center justify-center p-4">
               <div className="text-center space-y-4">
-                <h2 className="text-2xl font-bold text-red-400">Backend Unavailable</h2>
+                <h2 className="text-2xl font-bold text-red-400">백엔드 서버 연결 실패</h2>
                 <p className="text-neutral-300">
-                  Unable to connect to backend services at localhost:8000
+                  localhost:8000의 백엔드 서비스에 연결할 수 없습니다
                 </p>
                 <button 
                   onClick={() => window.location.reload()} 
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                 >
-                  Retry
+                  다시 시도
                 </button>
               </div>
             </div>

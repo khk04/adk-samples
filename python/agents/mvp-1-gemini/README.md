@@ -78,8 +78,8 @@ mvp-1-gemini/
 # 프로젝트 디렉토리로 이동
 cd /Users/khk/work/connev/adk-samples/python/agents/mvp-1-gemini
 
-# 의존성 설치 및 개발 서버 시작
-make install && make dev
+# 의존성 설치
+make install
 ```
 
 ### 2. 환경 변수 설정
@@ -93,21 +93,42 @@ GOOGLE_API_KEY=your_gemini_api_key_here
 
 ### 3. 실행 방법
 
-#### 개발 모드 (권장)
+#### 방법 1: 개별 실행 (권장)
+**터미널 1 - 백엔드 서버 실행:**
 ```bash
-# 프론트엔드와 백엔드를 동시에 실행
-make dev
+cd /Users/khk/work/connev/adk-samples/python/agents/mvp-1-gemini
+uv run adk api_server app --allow_origins="*"
 ```
 
-웹 브라우저에서 `http://localhost:5173`에 접속하여 사용할 수 있습니다.
+**터미널 2 - 프론트엔드 서버 실행:**
+```bash
+cd /Users/khk/work/connev/adk-samples/python/agents/mvp-1-gemini
+npm --prefix frontend run dev
+```
 
-#### 개별 실행
+#### 방법 2: Makefile 사용
 ```bash
 # 백엔드만 실행
-make backend
+make dev-backend
 
-# 프론트엔드만 실행
-make frontend
+# 프론트엔드만 실행 (새 터미널에서)
+make dev-frontend
+```
+
+### 4. 접속 확인
+- **프론트엔드**: http://localhost:5173
+- **백엔드 API**: http://localhost:8000
+- **API 문서**: http://localhost:8000/docs
+
+### 5. 문제 해결
+만약 포트 충돌이 발생하면:
+```bash
+# 실행 중인 프로세스 종료
+pkill -f "adk api_server"
+pkill -f "vite"
+
+# 다시 실행
+uv run adk api_server app --allow_origins="*"
 ```
 
 ## 🔍 사용 예시

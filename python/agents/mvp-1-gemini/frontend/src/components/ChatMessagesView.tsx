@@ -379,7 +379,7 @@ export function ChatMessagesView({
               <div className="flex justify-start">
                 <div className="flex items-center gap-2 text-neutral-400">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Thinking...</span>
+                  <span>분석 중...</span>
                 </div>
               </div>
             )}
@@ -392,7 +392,7 @@ export function ChatMessagesView({
                  <div className="flex justify-start pl-10 pt-2"> {/* Adjusted padding to align similarly to AI bubble */}
                     <div className="flex items-center gap-2 text-neutral-400">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Thinking...</span>
+                        <span>분석 중...</span>
                     </div>
                 </div>
             )}
@@ -409,7 +409,7 @@ export function ChatMessagesView({
                 onClick={onCancel}
                 className="text-red-400 hover:text-red-300"
               >
-                Cancel
+                취소
               </Button>
             </div>
           )}

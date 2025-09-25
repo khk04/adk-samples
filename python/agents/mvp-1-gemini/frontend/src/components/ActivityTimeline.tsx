@@ -44,9 +44,9 @@ export function ActivityTimeline({
     if (typeof data === "object" && data !== null && data.type) {
       switch (data.type) {
         case 'functionCall':
-          return `Calling function: ${data.name}\nArguments: ${JSON.stringify(data.args, null, 2)}`;
+          return `함수 호출: ${data.name}\n매개변수: ${JSON.stringify(data.args, null, 2)}`;
         case 'functionResponse':
-          return `Function ${data.name} response:\n${JSON.stringify(data.response, null, 2)}`;
+          return `함수 ${data.name} 응답:\n${JSON.stringify(data.response, null, 2)}`;
         case 'text':
           return data.content;
         case 'sources':

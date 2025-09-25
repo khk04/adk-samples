@@ -36,8 +36,8 @@ export function InputForm({ onSubmit, isLoading, context = 'homepage' }: InputFo
 
   const placeholderText =
     context === 'chat'
-      ? "Respond to the Agent, refine the plan, or type 'Looks good'..."
-      : "Ask me anything... e.g., A report on the latest Google I/O";
+      ? "에이전트에게 응답하거나 데이터 분석을 요청하세요..."
+      : "데이터 확인이나 리포트 생성을 요청하세요... 예: '데이터 확인해줘' 또는 '리포트를 만들어줘'";
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
