@@ -19,7 +19,7 @@ MVP-1 Gemini는 Google ADK(Agent Development Kit)와 Gemini Fullstack 구조를 
 - **다양한 출력 형식**: Markdown, HTML, TXT 형식 지원
 
 ### 3. Gemini Fullstack 구조 활용
-- **React 프론트엔드**: 사용자 친화적인 웹 인터페이스
+- **Vue.js 프론트엔드**: 사용자 친화적인 웹 인터페이스
 - **FastAPI 백엔드**: 고성능 API 서버
 - **Google ADK**: 상태 관리 및 멀티 에이전트 워크플로우
 
@@ -56,13 +56,13 @@ mvp-1-gemini/
 │       ├── user_data_check_tool.py  # 사용자 요청 분석 도구
 │       ├── data_validation_tool.py  # 데이터 검증 도구
 │       └── data_analysis_tool.py    # 데이터 분석 도구
-├── frontend/                         # React 프론트엔드
+├── frontend/                         # Vue.js 프론트엔드
 │   ├── src/
 │   │   ├── components/              # UI 컴포넌트
-│   │   ├── App.tsx                  # 메인 앱 컴포넌트
-│   │   └── main.tsx                 # 앱 진입점
+│   │   ├── App.vue                  # 메인 앱 컴포넌트
+│   │   └── main.js                  # 앱 진입점
 │   ├── package.json                 # 프론트엔드 의존성
-│   └── vite.config.ts               # Vite 설정
+│   └── vite.config.js               # Vite 설정
 ├── data/                            # 데이터 파일 저장소
 │   └── vdata/                       # 사용자 데이터 파일
 ├── .env.example                     # 환경 변수 예시
@@ -100,7 +100,7 @@ cd /Users/khk/work/connev/adk-samples/python/agents/mvp-1-gemini
 uv run adk api_server app --allow_origins="*"
 ```
 
-**터미널 2 - 프론트엔드 서버 실행:**
+**터미널 2 - Vue.js 프론트엔드 서버 실행:**
 ```bash
 cd /Users/khk/work/connev/adk-samples/python/agents/mvp-1-gemini
 npm --prefix frontend run dev
@@ -116,7 +116,7 @@ make dev-frontend
 ```
 
 ### 4. 접속 확인
-- **프론트엔드**: http://localhost:5173
+- **Vue.js 프론트엔드**: http://localhost:5173
 - **백엔드 API**: http://localhost:8000
 - **API 문서**: http://localhost:8000/docs
 
