@@ -93,7 +93,29 @@ GOOGLE_API_KEY=your_gemini_api_key_here
 
 ### 3. 실행 방법
 
-#### 방법 1: 개별 실행 (권장)
+#### 방법 1: Docker Compose 사용 (권장)
+**전체 애플리케이션을 Docker로 실행:**
+```bash
+# Docker 이미지 빌드 및 실행
+./docker-run.sh up
+
+# 또는 Makefile 사용
+make docker-up
+```
+
+**Docker 명령어 옵션:**
+```bash
+./docker-run.sh build      # 이미지만 빌드
+./docker-run.sh up         # 컨테이너 실행
+./docker-run.sh down       # 컨테이너 중지
+./docker-run.sh restart    # 컨테이너 재시작
+./docker-run.sh logs       # 로그 확인
+./docker-run.sh status     # 상태 확인
+./docker-run.sh health     # 헬스체크
+./docker-run.sh clean      # 리소스 정리
+```
+
+#### 방법 2: 개별 실행
 **터미널 1 - 백엔드 서버 실행:**
 ```bash
 cd /Users/khk/work/connev/adk-samples/python/agents/mvp-1-gemini
@@ -106,13 +128,16 @@ cd /Users/khk/work/connev/adk-samples/python/agents/mvp-1-gemini
 npm --prefix frontend run dev
 ```
 
-#### 방법 2: Makefile 사용
+#### 방법 3: Makefile 사용
 ```bash
 # 백엔드만 실행
 make dev-backend
 
 # 프론트엔드만 실행 (새 터미널에서)
 make dev-frontend
+
+# Docker 전체 실행
+make docker-dev
 ```
 
 ### 4. 접속 확인
@@ -123,12 +148,15 @@ make dev-frontend
 ### 5. 문제 해결
 만약 포트 충돌이 발생하면:
 ```bash
-# 실행 중인 프로세스 종료
+# Docker 컨테이너 중지
+./docker-run.sh down
+
+# 또는 실행 중인 프로세스 종료
 pkill -f "adk api_server"
 pkill -f "vite"
 
 # 다시 실행
-uv run adk api_server app --allow_origins="*"
+./docker-run.sh up
 ```
 
 ## 🔍 사용 예시

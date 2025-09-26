@@ -23,3 +23,31 @@ lint:
 
 deploy-infra:
 	echo "Skipping: Infra not required"
+
+# Docker 관련 명령어
+docker-build:
+	./docker-run.sh build
+
+docker-up:
+	./docker-run.sh up
+
+docker-down:
+	./docker-run.sh down
+
+docker-restart:
+	./docker-run.sh restart
+
+docker-logs:
+	./docker-run.sh logs
+
+docker-status:
+	./docker-run.sh status
+
+docker-health:
+	./docker-run.sh health
+
+docker-clean:
+	./docker-run.sh clean
+
+# Docker 개발 환경 전체 실행
+docker-dev: docker-build docker-up

@@ -1,0 +1,30 @@
+# Node.js 18 Alpine 이미지 사용
+FROM node:18-alpine
+
+# 작업 디렉토리 설정
+WORKDIR /app
+
+# 필요한 시스템 패키지 설치
+RUN apk add --no-cache curl
+
+# 프론트엔드 의존성 파일 복사
+COPY frontend/package*.json ./
+
+# npm 의존성 설치
+RUN npm ci --only=production
+
+# 프론트엔드 소스 코드 복사
+COPY frontend/ ./
+
+# 포트 노출
+EXPOSE 5173
+
+# 환경 변수 설정
+ENV VITE_API_URL=http://localhost:8000
+
+# 헬스체크 설정
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:5173 || exit 1
+
+# 개발 서버 실행
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
