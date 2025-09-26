@@ -25,7 +25,8 @@ from google.genai import types as genai_types
 from pydantic import BaseModel, Field
 
 from .config import config
-from .tools import check_user_data_request, validate_data, analyze_data
+from .tools import check_user_data_request, validate_data, analyze_data, generate_report_queries, generate_report
+from .sub_agents.report_evaluation_agent.agent import report_evaluation_agent
 
 
 # --- Structured Output Models ---
@@ -72,7 +73,7 @@ data_checker_agent = LlmAgent(
     - 사용자가 이해하기 쉬운 언어를 사용합니다.
     - 다음 단계에 대한 명확한 안내를 제공합니다.
     """,
-    tools=[check_user_data_request, validate_data, analyze_data],
+    tools=[check_user_data_request, validate_data, analyze_data, generate_report_queries, generate_report],
     output_key="data_analysis_result",
 )
 
@@ -136,10 +137,18 @@ mvp_1_agent = LlmAgent(
     **도구 사용:**
     - `data_checker_agent`: 데이터 확인 및 검증
     - `report_generator_agent`: 리포트 생성
+    - `report_evaluation_agent`: 리포트 품질 평가
+    
+    **5단계 질의 프로세스:**
+    1. 도메인 식별 및 리포트 유형 확인
+    2. 분석 범위 및 기준 설정
+    3. 데이터 범위 및 필터링 조건 정의
+    4. 리포트 스타일 및 상세 수준 결정
+    5. 리포트 파일 형식 및 전달 방식 확인
     
     사용자의 요청에 따라 적절한 서브 에이전트를 호출하여 작업을 수행합니다.
     """,
-    sub_agents=[data_checker_agent, report_generator_agent],
+    sub_agents=[data_checker_agent, report_generator_agent, report_evaluation_agent()],
     output_key="mvp_1_result",
 )
 

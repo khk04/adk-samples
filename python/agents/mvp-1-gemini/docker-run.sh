@@ -156,7 +156,7 @@ check_health() {
     local frontend_healthy=false
     
     # 백엔드 헬스체크
-    if curl -f http://localhost:8000/health &> /dev/null; then
+    if curl -f http://localhost:8000/docs &> /dev/null; then
         backend_healthy=true
         log_success "백엔드 서비스가 정상입니다."
     else

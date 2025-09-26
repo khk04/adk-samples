@@ -10,8 +10,8 @@ RUN apk add --no-cache curl
 # 프론트엔드 의존성 파일 복사
 COPY frontend/package*.json ./
 
-# npm 의존성 설치
-RUN npm ci --only=production
+# npm 의존성 설치 (개발 의존성 포함)
+RUN npm ci
 
 # 프론트엔드 소스 코드 복사
 COPY frontend/ ./
